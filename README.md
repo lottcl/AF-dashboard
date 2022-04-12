@@ -6,14 +6,14 @@ This documentation allows the user to deploy an interactive clinical dashboard f
 
 To install from the source:
 
-$ git clone git@github.com:lottcl/AF_dashboard.git
-$ cd cvdm
-$ python setup.py develop
+    $ git clone git@github.com:lottcl/AF_dashboard.git
+    $ cd cvdm
+    $ python setup.py develop
 
 
 To run the processing code and deploy the dashboard:
 
-$ make dashboard
+    $ make dashboard
 
 
 ## JupyterLab set-up
