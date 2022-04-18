@@ -21,7 +21,7 @@ setuptools.setup(
                       'pandas',
                       'numpy',
                       'datetime',
-                      'dash',
+                      'dash >=1.20',
                       'waitress',
                       'dash_bootstrap_components',
                       'dash_bootstrap_templates',
