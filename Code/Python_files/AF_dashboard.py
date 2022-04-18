@@ -1,54 +1,31 @@
 ## Dashboard Creation
 
-# ##### Import necessary packages
-
-# In[1]:
-
-
-from jupyter_dash import JupyterDash
+### Import necessary packages
 import dash
+from waitress import serve 
 from dash import Dash, html, dcc
 import dash_bootstrap_components as dbc
-import pandas as pd
-import numpy as np
+from dash_bootstrap_templates import load_figure_template
 import plotly.express as px
 import plotly.graph_objects as go
+import pandas as pd
 import numpy as np
-import kaleido
-from dash_bootstrap_templates import load_figure_template
 import statsmodels.api as sm
 
 
-# ##### Read in processed dataset
-
-# In[2]:
-
-
+### Read in processed dataset
 df=pd.read_csv('../../Data/risk.csv')
 
 
-# ##### Define the app and set the style guide
-
-# In[3]:
-
-
+### Define the app and set the style guide
+#### stylesheet pulls from Dash Bootstrap Components LUX theme
 external_stylesheets = [dbc.themes.LUX]
 
-app = JupyterDash(__name__, external_stylesheets=external_stylesheets, assets_external_path='assets')
+#### Define the app
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets, assets_external_path='assets')
 
-# Create server variable with Flask server object for use with gunicorn
-server = app.server
-
-
-# [return to top](#top)
-
-# #### App Features <a id="features"></a>
-
-# ##### Create a data upload button <a id="upload"></a>
-
-# In[4]:
-
-
+### App Features
+#### Create a data upload button
 upload = html.Div([
     dcc.Upload(
         id='upload-data',
@@ -69,11 +46,7 @@ upload = html.Div([
 ])
 
 
-# ##### Create a form to calculate new risk scores <a id="form"></a>
-
-# In[5]:
-
-
+#### Create a form to calculate new risk scores <a id="form"></a>
 age_input = html.Div([
     dbc.Input(id='age-state', type='number')
 ])
@@ -183,11 +156,8 @@ calculate_button = html.Div(
 )
 
 
-# ##### Create display cards for the calculated risk scores <a id="cards"></a>
-
-# In[6]:
-
-
+#### Create display cards for the calculated risk scores <a id="cards"></a>
+### --> AFRI Card
 card1 = dbc.Card(
     dbc.CardBody(
         [
@@ -203,7 +173,7 @@ card1 = dbc.Card(
         'margin-top': '10px',
     }
 )
-
+### --> CHADS Card
 card2 = dbc.Card(
     dbc.CardBody(
         [
@@ -219,7 +189,7 @@ card2 = dbc.Card(
         'margin-top': '10px',
     }
 )
-
+### --> POAF Card
 card3 = html.Div([
         dbc.Card(
             dbc.CardBody(
@@ -238,7 +208,7 @@ card3 = html.Div([
             id='Poaf-card'
     )
  ])
-
+### --> NPOAF Card
 card4 = dbc.Card(
     dbc.CardBody(
         [
@@ -254,7 +224,7 @@ card4 = dbc.Card(
         'margin-top': '10px',
     }
 )
-
+### -->  Simplified POAF Card
 card5 = dbc.Card(
     dbc.CardBody(
         [
@@ -270,7 +240,7 @@ card5 = dbc.Card(
         'margin-top': '10px',
     }
 )
-
+### --> COM-AF Card
 card6 = dbc.Card(
     dbc.CardBody(
         [
@@ -289,11 +259,7 @@ card6 = dbc.Card(
 )
 
 
-# ##### Create a graph to compare risk scores two at a time <a id="compare"></a>
-
-# In[7]:
-
-
+#### Create a graph to compare risk scores two at a time <a id="compare"></a>
 df['n'] = np.arange(len(df))
 df_melt = df.melt(id_vars='n', value_vars=['chads2','afri','npoaf'])
 df2 = pd.merge(df, df_melt, on='n')
@@ -322,8 +288,7 @@ fig.add_trace(
         marker=dict(color="crimson"),
         showlegend=False)
 )
-
-#dropdown menus to select risk scores for comparison
+# --> dropdown menus to select risk scores for comparison
 dropdowns = html.Div([
     html.P("x-axis: ", className="crossfilter-xaxis-label", style={'margin-left': '10px'}),
     dcc.Dropdown(
@@ -342,11 +307,7 @@ dropdowns = html.Div([
 ])
 
 
-# ##### Create miniature cards to display calculated scores on page 2 <a id="minicards"></a>
-
-# In[8]:
-
-
+#### Create miniature cards to display calculated scores on page 2 <a id="minicards"></a>
 minicard1 = dbc.Card(
     dbc.CardBody(
         [
@@ -431,37 +392,27 @@ minicards = html.Div([
 ], style={'margin-top': '10px','margin-left': '10px'})   
 
 
-# ##### Create a tab for AFRI results <a id="afri"></a>
-
-# AFRI results calculation
-
-# In[9]:
-
-
-#classify predicted AF outcome based on cut point
+#### Create a tab for AFRI results <a id="afri"></a>
+# --> AFRI results calculation
+### --> classify predicted AF outcome based on cut point
 df['a_AF'] = np.where((df['afri']>=2),1,0)
-
-#tabulate totals for TP, FP, FN, and TN
+### --> tabulate totals for TP, FP, FN, and TN
 a_TP = len(df[(df['AF']==1) & (df['a_AF']==1)])
 a_FP = len(df[(df['AF']==0) & (df['a_AF']==1)])
 a_FN = len(df[(df['AF']==1) & (df['a_AF']==0)])
 a_TN = len(df[(df['AF']==0) & (df['a_AF']==0)])
-
-#define the independent and response variables
+### --> define the independent and response variables
 independent1 = df['afri']
 response1 = df['AF']
-
-#bulid the logistic regression model
+### --> bulid the logistic regression model
 log1 = sm.Logit(response1,sm.add_constant(independent1)).fit() #use 'add_constant' to add the intercept to the model
-
-#format the CI for the estimate
+### --> format the CI for the estimate
 ci1 = np.exp(log1.conf_int(alpha=0.05)).drop(index="const", axis=0)
 ci1.columns = ["2.5%", "97.5%"]
 or1 = np.exp(log1.params['afri'].item())
 ci1_lower = ci1['2.5%'].item()
 ci1_higher = ci1['97.5%'].item()
-
-#format the results for the card
+### --> format the results for the card
 AFRI_OR = round(or1, 2)
 AFRI_lower = round(ci1_lower,2)
 AFRI_higher = round(ci1_higher,2)
@@ -470,21 +421,14 @@ AFRI_sp = round((a_TN/(a_TN+a_FP))*100)
 AFRI_ppv = round((a_TP/(a_TP+a_FP))*100)
 AFRI_npv = round((a_TN/(a_TN+a_FN))*100)
 
-
-# AFRI histogram
-
-# In[10]:
-
-
-#apply dashboard formatting to figure
+# --> AFRI histogram
+### --> apply dashboard formatting to figure
 load_figure_template("lux")
-
-#establish histogram
+### --> establish histogram
 fig1 = px.histogram(df, x="afri", histnorm="probability", color="AF", 
                    color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
                    labels={'AF':'Atrial Fibrillation', 'afri':'AFRI Score'})
-
-#update formatting
+### --> update formatting
 newnames={'0': 'no', '1': 'yes'}
 fig1.for_each_trace(lambda t: t.update(name = newnames[t.name]))
 fig1.update_layout(title_text='AFRI Scores by Atrial Fibrillation Outcome', title_x=0.5)
@@ -507,13 +451,8 @@ fig1.update_layout(legend=dict(
     x=0.85
 ))
 
-
-# AFRI results card and tab format
-
-# In[11]:
-
-
-#output the results on a card
+# --> AFRI results card and tab format
+### --> output the results on a card
 card_afri = html.Div([
     dbc.Row([
         dbc.Col([
@@ -533,45 +472,34 @@ card_afri = html.Div([
     ],
     justify='center')
 ])
-
-#establish the format for the AFRI tab
+### --> establish the format for the AFRI tab
 afri_tab = html.Div([
     dcc.Graph(figure=fig1, style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_afri
 ])
 
 
-# ##### Create a tab for CHADS results <a id="chads"></a>
-
-# CHADS results calculation
-
-# In[12]:
-
-
-#classify predicted AF outcome based on cut point
+#### Create a tab for CHADS results 
+# --> CHADS results calculation
+### --> classify predicted AF outcome based on cut point
 df['c_AF'] = np.where((df['chads2']>=4),1,0)
-
-#tabulate totals for TP, FP, FN, and TN
+### --> tabulate totals for TP, FP, FN, and TN
 c_TP = len(df[(df['AF']==1) & (df['c_AF']==1)])
 c_FP = len(df[(df['AF']==0) & (df['c_AF']==1)])
 c_FN = len(df[(df['AF']==1) & (df['c_AF']==0)])
 c_TN = len(df[(df['AF']==0) & (df['c_AF']==0)])
-
-#define the independent and response variables
+### --> define the independent and response variables
 independent2 = df['chads2']
 response2 = df['AF']
-
-#bulid the logistic regression model
+### --> bulid the logistic regression model
 log2 = sm.Logit(response2,sm.add_constant(independent2)).fit() #use 'add_constant' to add the intercept to the model
-
-#format the CI for the estimate
+### --> format the CI for the estimate
 ci2 = log2.conf_int(alpha=0.05).drop(index="const", axis=0)
 ci2.columns = ["2.5%", "97.5%"]
 or2 = np.exp(log2.params['chads2'].item())
 ci2_lower = ci2['2.5%'].item()
 ci2_higher = ci2['97.5%'].item()
-
-#format the results for the card
+### --> format the results for the card
 CHADS_OR = round(or2, 2)
 CHADS_lower = round(ci2_lower,2)
 CHADS_higher = round(ci2_higher,2)
@@ -580,20 +508,14 @@ CHADS_sp = round((c_TN/(c_TN+c_FP))*100)
 CHADS_ppv = round((c_TP/(c_TP+c_FP))*100)
 CHADS_npv = round((c_TN/(c_TN+c_FN))*100)
 
-
-# CHADS histogram
-
-# In[13]:
-
-
-#apply dashboard formatting to figure
+# --> CHADS histogram
+### --> apply dashboard formatting to figure
 load_figure_template("lux")
-
-#establish histogram
+### --> establish histogram
 fig2 = px.histogram(df, x="chads2", histnorm="probability", color="AF", 
                    color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
                    labels={'AF':'Atrial Fibrillation', 'chads2':'CHA2DS2-VASc Score'})
-#update formatting
+### --> update formatting
 newnames={'0': 'no', '1': 'yes'}
 fig2.for_each_trace(lambda t: t.update(name = newnames[t.name]))
 fig2.update_layout(title_text='CHA2DS2-VASc Scores by Atrial Fibrillation Outcome', title_x=0.5)
@@ -616,13 +538,8 @@ fig2.update_layout(legend=dict(
     x=0.85
 ))
 
-
-# CHADS results card and tab format
-
-# In[14]:
-
-
-#output the results on a card
+# --> CHADS results card and tab format
+### --> output the results on a card
 card_chads = html.Div([
     dbc.Row([
         dbc.Col([
@@ -642,45 +559,34 @@ card_chads = html.Div([
     ],
     justify='center')
 ])
-
-#establish the format for the AFRI tab
+### --> establish the format for the CHADS tab
 chads_tab = html.Div([
     dcc.Graph(figure=fig2, style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_chads
 ])
 
 
-# ##### Create a tab for POAF results <a id="poaf"></a>
-
-# POAF results calculation
-
-# In[15]:
-
-
-#classify predicted AF outcome based on cut point
+#### Create a tab for POAF results
+# --> POAF results calculation
+### --> classify predicted AF outcome based on cut point
 df['p_AF'] = np.where((df['poaf']>=3),1,0)
-
-#tabulate totals for TP, FP, FN, and TN
+### --> tabulate totals for TP, FP, FN, and TN
 p_TP = len(df[(df['AF']==1) & (df['p_AF']==1)])
 p_FP = len(df[(df['AF']==0) & (df['p_AF']==1)])
 p_FN = len(df[(df['AF']==1) & (df['p_AF']==0)])
 p_TN = len(df[(df['AF']==0) & (df['p_AF']==0)])
-
-#define the independent and response variables
+### --> define the independent and response variables
 independent3 = df['poaf']
 response3 = df['AF']
-
-#bulid the logistic regression model
+### --> bulid the logistic regression model
 log3 = sm.Logit(response3,sm.add_constant(independent3)).fit() #use 'add_constant' to add the intercept to the model
-
-#format the CI for the estimate
+### --> format the CI for the estimate
 ci3 = np.exp(log3.conf_int(alpha=0.05)).drop(index="const", axis=0)
 ci3.columns = ["2.5%", "97.5%"]
 or3 = np.exp(log3.params['poaf'].item())
 ci3_lower = ci3['2.5%'].item()
 ci3_higher = ci3['97.5%'].item()
-
-#format the results for the card
+### --> format the results for the card
 POAF_OR = round(or3, 2)
 POAF_lower = round(ci3_lower,2)
 POAF_higher = round(ci3_higher,2)
@@ -689,20 +595,14 @@ POAF_sp = round((p_TN/(p_TN+p_FP))*100)
 POAF_ppv = round((p_TP/(p_TP+p_FP))*100)
 POAF_npv = round((p_TN/(p_TN+p_FN))*100)
 
-
-# POAF histogram
-
-# In[16]:
-
-
-#apply dashboard formatting to figure
+# --> POAF histogram
+### --> apply dashboard formatting to figure
 load_figure_template("lux")
-
-#establish histogram
+### --> establish histogram
 fig3 = px.histogram(df, x="poaf", histnorm="probability", color="AF", 
                    color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
                    labels={'AF':'Atrial Fibrillation', 'poaf':'POAF Score'})
-#update formatting
+### --> update formatting
 newnames={'0': 'no', '1': 'yes'}
 fig3.for_each_trace(lambda t: t.update(name = newnames[t.name]))
 fig3.update_layout(title_text='POAF Scores by Atrial Fibrillation Outcome', title_x=0.5)
@@ -725,13 +625,8 @@ fig3.update_layout(legend=dict(
     x=0.85
 ))
 
-
-# POAF results card and tab format
-
-# In[17]:
-
-
-#output the results on a card
+# --> POAF results card and tab format
+### --> output the results on a card
 card_poaf = html.Div([
     dbc.Row([
         dbc.Col([
@@ -751,45 +646,34 @@ card_poaf = html.Div([
     ],
     justify='center')
 ])
-
-#establish the format for the AFRI tab
+### --> establish the format for the POAF tab
 poaf_tab = html.Div([
     dcc.Graph(figure=fig3, style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_poaf
 ])
 
 
-# ##### Create a tab for NPOAF results <a id="npoaf"></a>
-
-# NPOAF results calculation
-
-# In[18]:
-
-
-#classify predicted AF outcome based on cut point
+#### Create a tab for NPOAF results
+# --> NPOAF results calculation
+### --> classify predicted AF outcome based on cut point
 df['n_AF'] = np.where((df['npoaf']>=2),1,0)
-
-#tabulate totals for TP, FP, FN, and TN
+### --> tabulate totals for TP, FP, FN, and TN
 n_TP = len(df[(df['AF']==1) & (df['n_AF']==1)])
 n_FP = len(df[(df['AF']==0) & (df['n_AF']==1)])
 n_FN = len(df[(df['AF']==1) & (df['n_AF']==0)])
 n_TN = len(df[(df['AF']==0) & (df['n_AF']==0)])
-
-#define the independent and response variables
+### --> define the independent and response variables
 independent4 = df['npoaf']
 response4 = df['AF']
-
-#bulid the logistic regression model
+### --> bulid the logistic regression model
 log4 = sm.Logit(response4,sm.add_constant(independent4)).fit() #use 'add_constant' to add the intercept to the model
-
-#format the CI for the estimate
+### --> format the CI for the estimate
 ci4 = np.exp(log4.conf_int(alpha=0.05)).drop(index="const", axis=0)
 ci4.columns = ["2.5%", "97.5%"]
 or4 = np.exp(log4.params['npoaf'].item())
 ci4_lower = ci4['2.5%'].item()
 ci4_higher = ci4['97.5%'].item()
-
-#format the results for the card
+### --> format the results for the card
 NPOAF_OR = round(or4, 2)
 NPOAF_lower = round(ci4_lower,2)
 NPOAF_higher = round(ci4_higher,2)
@@ -798,20 +682,14 @@ NPOAF_sp = round((n_TN/(n_TN+n_FP))*100)
 NPOAF_ppv = round((n_TP/(n_TP+n_FP))*100)
 NPOAF_npv = round((n_TN/(n_TN+n_FN))*100)
 
-
-# POAF histogram
-
-# In[19]:
-
-
-#apply dashboard formatting to figure
+# --> NPOAF histogram
+### --> apply dashboard formatting to figure
 load_figure_template("lux")
-
-#establish histogram
+### --> establish histogram
 fig4 = px.histogram(df, x="npoaf", histnorm="probability", color="AF", 
                    color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
                    labels={'AF':'Atrial Fibrillation', 'npoaf':'NPOAF Score'})
-#update formatting
+### --> update formatting
 newnames={'0': 'no', '1': 'yes'}
 fig4.for_each_trace(lambda t: t.update(name = newnames[t.name]))
 fig4.update_layout(title_text='NPOAF Scores by Atrial Fibrillation Outcome', title_x=0.5)
@@ -834,13 +712,8 @@ fig4.update_layout(legend=dict(
     x=0.85
 ))
 
-
-# POAF results card and tab format
-
-# In[20]:
-
-
-#output the results on a card
+# --> NPOAF results card and tab format
+### --> output the results on a card
 card_npoaf = html.Div([
     dbc.Row([
         dbc.Col([
@@ -860,45 +733,34 @@ card_npoaf = html.Div([
     ],
     justify='center')
 ])
-
-#establish the format for the AFRI tab
+### --> establish the format for the NPOAF tab
 npoaf_tab = html.Div([
     dcc.Graph(figure=fig4, style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_npoaf
 ])
 
 
-# ##### Create a tab for Simplified POAF results <a id="simplified"></a>
-
-# Simplified POAF results calculation
-
-# In[21]:
-
-
-#classify predicted AF outcome based on cut point
+#### Create a tab for Simplified POAF results <a id="simplified"></a>
+# --> Simplified POAF results calculation
+### --> classify predicted AF outcome based on cut point
 df['s_AF'] = np.where((df['simplified']>=3),1,0)
-
-#tabulate totals for TP, FP, FN, and TN
+### --> tabulate totals for TP, FP, FN, and TN
 s_TP = len(df[(df['AF']==1) & (df['s_AF']==1)])
 s_FP = len(df[(df['AF']==0) & (df['s_AF']==1)])
 s_FN = len(df[(df['AF']==1) & (df['s_AF']==0)])
 s_TN = len(df[(df['AF']==0) & (df['s_AF']==0)])
-
-#define the independent and response variables
+### --> define the independent and response variables
 independent5 = df['simplified']
 response5 = df['AF']
-
-#bulid the logistic regression model
+### --> bulid the logistic regression model
 log5 = sm.Logit(response5,sm.add_constant(independent5)).fit() #use 'add_constant' to add the intercept to the model
-
-#format the CI for the estimate
+### --> format the CI for the estimate
 ci5 = np.exp(log5.conf_int(alpha=0.05)).drop(index="const", axis=0)
 ci5.columns = ["2.5%", "97.5%"]
 or5 = np.exp(log5.params['simplified'].item())
 ci5_lower = ci5['2.5%'].item()
 ci5_higher = ci5['97.5%'].item()
-
-#format the results for the card
+### --> format the results for the card
 Simplified_OR = round(or5, 2)
 Simplified_lower = round(ci5_lower,2)
 Simplified_higher = round(ci5_higher,2)
@@ -908,19 +770,14 @@ Simplified_ppv = round((s_TP/(s_TP+s_FP))*100)
 Simplified_npv = round((s_TN/(s_TN+s_FN))*100)
 
 
-# Simplified POAF histogram
-
-# In[22]:
-
-
-#apply dashboard formatting to figure
+# --> Simplified POAF histogram
+### --> apply dashboard formatting to figure
 load_figure_template("lux")
-
-#establish histogram
+### --> establish histogram
 fig5 = px.histogram(df, x="simplified", histnorm="probability", color="AF", 
                    color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
                    labels={'AF':'Atrial Fibrillation', 'simplified':'Simplified POAF Score'})
-#update formatting
+### --> update formatting
 newnames={'0': 'no', '1': 'yes'}
 fig5.for_each_trace(lambda t: t.update(name = newnames[t.name]))
 fig5.update_layout(title_text='Simplified POAF Scores by Atrial Fibrillation Outcome', title_x=0.5)
@@ -944,12 +801,8 @@ fig5.update_layout(legend=dict(
 ))
 
 
-# Simplified POAF results card and tab format
-
-# In[23]:
-
-
-#output the results on a card
+# --> Simplified POAF results card and tab format
+### --> output the results on a card
 card_simplified = html.Div([
     dbc.Row([
         dbc.Col([
@@ -969,45 +822,34 @@ card_simplified = html.Div([
     ],
     justify='center')
 ])
-
-#establish the format for the AFRI tab
+### --> establish the format for the AFRI tab
 simplified_tab = html.Div([
     dcc.Graph(figure=fig5, style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_simplified
 ])
 
 
-# ##### Create a tab for COM-AF results <a id="comaf"></a>
-
-# COM-AF results calculation
-
-# In[24]:
-
-
-#classify predicted AF outcome based on cut point
+#### Create a tab for COM-AF results
+# --> COM-AF results calculation
+### --> classify predicted AF outcome based on cut point
 df['co_AF'] = np.where((df['comaf']>=3),1,0)
-
-#tabulate totals for TP, FP, FN, and TN
+### --> tabulate totals for TP, FP, FN, and TN
 co_TP = len(df[(df['AF']==1) & (df['co_AF']==1)])
 co_FP = len(df[(df['AF']==0) & (df['co_AF']==1)])
 co_FN = len(df[(df['AF']==1) & (df['co_AF']==0)])
 co_TN = len(df[(df['AF']==0) & (df['co_AF']==0)])
-
-#define the independent and response variables
+### --> define the independent and response variables
 independent6 = df['comaf']
 response6 = df['AF']
-
-#bulid the logistic regression model
+### --> bulid the logistic regression model
 log6 = sm.Logit(response6,sm.add_constant(independent6)).fit() #use 'add_constant' to add the intercept to the model
-
-#format the CI for the estimate
+### --> format the CI for the estimate
 ci6 = np.exp(log6.conf_int(alpha=0.05)).drop(index="const", axis=0)
 ci6.columns = ["2.5%", "97.5%"]
 or6 = np.exp(log6.params['comaf'].item())
 ci6_lower = ci6['2.5%'].item()
 ci6_higher = ci6['97.5%'].item()
-
-#format the results for the card
+### --> format the results for the card
 COMAF_OR = round(or6, 2)
 COMAF_lower = round(ci6_lower,2)
 COMAF_higher = round(ci6_higher,2)
@@ -1017,19 +859,14 @@ COMAF_ppv = round((co_TP/(co_TP+co_FP))*100)
 COMAF_npv = round((co_TN/(co_TN+co_FN))*100)
 
 
-# COM-AF histogram
-
-# In[25]:
-
-
-#apply dashboard formatting to figure
+# --> COM-AF histogram
+### --> apply dashboard formatting to figure
 load_figure_template("lux")
-
-#establish histogram
+### --> establish histogram
 fig6 = px.histogram(df, x="comaf", histnorm="probability", color="AF", 
                    color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
                    labels={'AF':'Atrial Fibrillation', 'comaf':'COM-AF Score'})
-#update formatting
+### --> update formatting
 newnames={'0': 'no', '1': 'yes'}
 fig6.for_each_trace(lambda t: t.update(name = newnames[t.name]))
 fig6.update_layout(title_text='COM-AF Scores by Atrial Fibrillation Outcome', title_x=0.5)
@@ -1053,12 +890,8 @@ fig6.update_layout(legend=dict(
 ))
 
 
-# COM-AF results card and tab format
-
-# In[26]:
-
-
-#output the results on a card
+# --> COM-AF results card and tab format
+### --> output the results on a card
 card_comaf = html.Div([
     dbc.Row([
         dbc.Col([
@@ -1078,23 +911,15 @@ card_comaf = html.Div([
     ],
     justify='center')
 ])
-
-#establish the format for the AFRI tab
+### --> establish the format for the AFRI tab
 comaf_tab = html.Div([
     dcc.Graph(figure=fig6, style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_comaf
 ])
 
 
-# [return to top](#top)
-
-# #### App Layout <a id="layout"></a>
-
-# ##### Define the tabs for the risk scores
-
-# In[27]:
-
-
+### App Layout
+#### Define the tabs for the risk scores
 score_tab = dbc.Tabs(
             [
                 dbc.Tab(afri_tab, label="AFRI", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center"),
@@ -1107,11 +932,7 @@ score_tab = dbc.Tabs(
         )
 
 
-# ##### Define the layout of the two pages
-
-# In[28]:
-
-
+#### Define the layout of the two pages
 tab1 = dbc.Row(
             [
                 dbc.Col([accordion, calculate_button], width=8),
@@ -1131,11 +952,7 @@ tab2 = dbc.Row(
         )
 
 
-# ##### Define the app layout
-
-# In[29]:
-
-
+#### Define the app layout
 app.layout = html.Div(
     [
         html.H1(children='Atrial Fibrillation Risk Prediction', 
@@ -1160,15 +977,8 @@ app.layout = html.Div(
 )
 
 
-# [return to top](#top)
-
-# #### App Callbacks and Configuration <a id="callbacks"></a>
-
-# ##### Establish a callback for AFRI Calculation
-
-# In[30]:
-
-
+### App Callbacks and Configuration
+#### Establish a callback for AFRI Calculation
 @app.callback(
     [
         dash.dependencies.Output('afri-val', 'children'),
@@ -1218,11 +1028,7 @@ def afri_calc(button_click, age_state, gender_state, weight_state, height_state,
     return afri, afri2
 
 
-# ##### Establish a callback for CHADS Calculation
-
-# In[31]:
-
-
+#### Establish a callback for CHADS Calculation
 @app.callback(
     [
         dash.dependencies.Output('chads-val', 'children'),
@@ -1270,11 +1076,7 @@ def chads_calc(button_click, age_state, gender_state, weight_state, height_state
     return chads, chads2
 
 
-# ##### Establish a callback for POAF Calculation
-
-# In[32]:
-
-
+#### Establish a callback for POAF Calculation
 @app.callback(
     [
         dash.dependencies.Output('poaf-val', 'children'),
@@ -1324,11 +1126,7 @@ def poaf_calc(button_click, age_state, gender_state, weight_state, height_state,
     return poaf, poaf2
 
 
-# ##### Establish a callback for NPOAF Calculation
-
-# In[33]:
-
-
+#### Establish a callback for NPOAF Calculation
 @app.callback(
     [
         dash.dependencies.Output('npoaf-val', 'children'),
@@ -1370,11 +1168,7 @@ def npoaf_calc(button_click, age_state, gender_state, weight_state, height_state
     return npoaf, npoaf2
 
 
-# ##### Establish a callback for Simplified POAF Calculation
-
-# In[34]:
-
-
+#### Establish a callback for Simplified POAF Calculation
 @app.callback(
     [
         dash.dependencies.Output('simplified-val', 'children'),
@@ -1414,11 +1208,7 @@ def simplified_calc(button_click, age_state, gender_state, weight_state, height_
     return simplified, simplified2
 
 
-# ##### Establish a callback for COM-AF Calculation
-
-# In[35]:
-
-
+#### Establish a callback for COM-AF Calculation
 @app.callback(
     [
         dash.dependencies.Output('comaf-val', 'children'),
@@ -1462,33 +1252,16 @@ def comaf_calc(button_click, age_state, gender_state, weight_state, height_state
     return comaf, comaf2
 
 
-# ##### Define a function for running the server with an option for specifying the port
-
-# In[36]:
-
-
+#### Define a function for running the server with an option for specifying the port
 def run_server(self,
-               port=8050,
-               debug=True,
-               threaded=True,
-               **flask_run_options):
-    self.server.run(port=port, debug=debug, **flask_run_options)
+               port=8050):
+    serve(self, host="0.0.0.0", port=port)
 
 
-# ##### Configure the settings to avoid an attribute error when using JupyterDash
-
-# In[37]:
-
-
+#### Configure the settings to avoid an attribute error when using JupyterDash
 del app.config._read_only["requests_pathname_prefix"]
 
 
-# ##### Run the app
+#### Run the app (modify port as necessary to find one that is not in use)
+app.run_server(port=8050)
 
-# In[38]:
-
-
-app.run_server(debug=True, port=8056)
-
-
-# [return to top](#top)

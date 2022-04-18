@@ -7,13 +7,21 @@ This documentation allows the user to deploy an interactive clinical dashboard f
 To install from the source:
 
     $ git clone git@github.com:lottcl/AF_dashboard.git
-    $ cd cvdm
+    $ cd AF_dashboard
     $ python setup.py develop
 
 
-To run the processing code and deploy the dashboard:
+To run the processing code:
 
-    $ make dashboard
+    $ cd AF_dashboard/Code/Python_files
+    $ Python AF_process.py
+    $ Rscript Code/Python_files/imp_creatinine.R
+    $ Python AF_process_post_impute.py
+
+To run deploy the dashboard:
+
+    $ cd AF_dashboard/Code/Python_files
+    $ Python AF_dashboard.py
 
 
 ## JupyterLab set-up

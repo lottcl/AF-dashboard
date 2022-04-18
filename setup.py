@@ -21,12 +21,11 @@ setuptools.setup(
                       'pandas',
                       'numpy',
                       'datetime',
-                      'sqlite3',
                       'dash',
+                      'waitress',
                       'dash_bootstrap_components',
-                      'plotly',
-                      'kaleido',
                       'dash_bootstrap_templates',
+                      'plotly',
                       'statsmodels'
                       ],
     zip_safe=False
