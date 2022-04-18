@@ -1,4 +1,5 @@
 import setuptools
+from setuptools import find_packages
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -27,6 +28,12 @@ setuptools.setup(
                       'dash_bootstrap_templates',
                       'plotly',
                       'statsmodels'
-                      ],
+    ],
+    packages=find_packages(
+        where='src',
+        include=['pkg*'],
+        exclude=['additional'],
+    ),
+    package_dir={"": "src"},
     zip_safe=False
 )
