@@ -13,10 +13,6 @@ import numpy as np
 import statsmodels.api as sm
 
 
-### Read in processed dataset
-df=pd.read_csv('../../Data/risk.csv')
-
-
 ### Define the app and set the style guide
 #### stylesheet pulls from Dash Bootstrap Components LUX theme
 external_stylesheets = [dbc.themes.LUX]
@@ -40,13 +36,16 @@ upload = html.Div([
             'textAlign': 'center',
             'margin' : '10px'
         },
-        # Allow multiple files to be uploaded
+        # Prevent multiple files from being uploaded
         multiple=False
     )
 ])
 
+#### Store the data locally
+store_data = dcc.Store(id='input-dataset', storage_type='local')
 
-#### Create a form to calculate new risk scores <a id="form"></a>
+
+#### Create a form to calculate new risk scores 
 age_input = html.Div([
     dbc.Input(id='age-state', type='number')
 ])
@@ -155,13 +154,20 @@ calculate_button = html.Div(
     style={'margin-left' : '10px ', 'margin-top': '10px', 'margin-bottom': '10px'}
 )
 
+#### Store the calculated values locally
+afri_state = dcc.Store(id='afri-state', storage_type='local')
+chads_state = dcc.Store(id='chads-state', storage_type='local')
+poaf_state = dcc.Store(id='poaf-state', storage_type='local')
+npoaf_state = dcc.Store(id='npoaf-state', storage_type='local')
+simplified_state = dcc.Store(id='simplified-state', storage_type='local')
+comaf_state = dcc.Store(id='comaf-state', storage_type='local')
 
-#### Create display cards for the calculated risk scores <a id="cards"></a>
+#### Create display cards for the calculated risk scores 
 ### --> AFRI Card
 card1 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='afri-val', className="card-val1",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='afri-card', className="card-val1"),
             html.P(
                 ["Atrial Fibrillation Risk Index"], 
                 className="card-text1",
@@ -177,7 +183,7 @@ card1 = dbc.Card(
 card2 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='chads-val', className="card-val2",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='chads-card', className="card-val2"),
             html.P(
                 ["CHA2DS2-VASc Score"], 
                 className="card-text2",
@@ -194,7 +200,7 @@ card3 = html.Div([
         dbc.Card(
             dbc.CardBody(
                 [
-                    html.H4(id='poaf-val', className="card-val3",style={'textAlign': 'center', 'color':'slateblue'}),
+                    html.H4(id='poaf-card', className="card-val3"),
                     html.P(
                         ["Postoperative Atrial Fibrillation Score"], 
                         className="card-text3",
@@ -212,7 +218,7 @@ card3 = html.Div([
 card4 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='npoaf-val', className="card-val4",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='npoaf-card', className="card-val4"),
             html.P(
                 ["New-onset Postoperative Atrial Fibrillation Score"], 
                 className="card-text4",
@@ -228,7 +234,7 @@ card4 = dbc.Card(
 card5 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='simplified-val', className="card-val5",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='simplified-card', className="card-val5"),
             html.P(
                 ["Simplified Postoperative Atrial Fibrillation Score"], 
                 className="card-text5",
@@ -244,7 +250,7 @@ card5 = dbc.Card(
 card6 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='comaf-val', className="card-val6",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='comaf-card', className="card-val6"),
             html.P(
                 ["Combined Risk Score to Predict Atrial Fibrillation "], 
                 className="card-text6",
@@ -258,60 +264,45 @@ card6 = dbc.Card(
     }
 )
 
-
-#### Create a graph to compare risk scores two at a time <a id="compare"></a>
-df['n'] = np.arange(len(df))
-df_melt = df.melt(id_vars='n', value_vars=['chads2','afri','npoaf'])
-df2 = pd.merge(df, df_melt, on='n')
-fig = px.strip(df2, x="afri", y="npoaf", color="AF", 
-                color_discrete_map = {0:'midnightblue',1:'lightsteelblue'},
-                labels={'AF':'Atrial Fibrillation', 'npoaf':'NPOAF Score', 'afri': 'AFRI Score'})
-newnames={'0': 'no', '1': 'yes'}
-fig.for_each_trace(lambda t: t.update(name = newnames[t.name]))
-fig.update_layout(title_text='Comparison of Two Scores', title_x=0.5)
-fig.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'})
-fig.update_layout(xaxis=dict(
-        linecolor="#BCCCDC",  # Sets color of X-axis line
-        showgrid=False, # Removes X-axis grid lines
-        fixedrange=True  
-    ),
-    yaxis=dict(  
-        linecolor="#BCCCDC",  # Sets color of Y-axis line
-        showgrid=False, # Removes Y-axis grid lines
-        fixedrange=True      
-    ))
-fig.add_trace(
-    go.Scatter(
-        x=[3],
-        y=[3],
-        mode="markers",
-        marker=dict(color="crimson"),
-        showlegend=False)
-)
-# --> dropdown menus to select risk scores for comparison
+#### Create a dropdown menu for the risk score comparison graph
 dropdowns = html.Div([
     html.P("x-axis: ", className="crossfilter-xaxis-label", style={'margin-left': '10px'}),
     dcc.Dropdown(
         id='crossfilter-xaxis-column',
-        options=['AFRI','CHA2DS2-VASc', 'POAF', 'NPOAF', 'Simplified POAF', 'COM-AF'],
-        value='AFRI', 
+        options=[
+            {'label': 'AFRI', 'value': 'afri'},
+            {'label': 'CHA2DS2-VASc', 'value': 'chads'},
+            {'label': 'POAF', 'value': 'poaf'},
+            {'label': 'NPOAF', 'value': 'poaf'},
+            {'label': 'Simplified', 'value': 'simplified'},
+            {'label': 'COM-AF', 'value': 'comaf'}
+        ],
+        value='afri', 
         style={'margin-left': '5px'}
     ),
     html.P("y-axis: ", className="crossfilter-yaxis-label", style={'margin-left': '10px'}),
     dcc.Dropdown(
         id='crossfilter-yaxis-column',
-        options=['AFRI','CHA2DS2-VASc', 'POAF', 'NPOAF', 'Simplified POAF', 'COM-AF'],
-        value='NPOAF', 
+        options=[
+            {'label': 'AFRI', 'value': 'afri'},
+            {'label': 'CHA2DS2-VASc', 'value': 'chads'},
+            {'label': 'POAF', 'value': 'poaf'},
+            {'label': 'NPOAF', 'value': 'npoaf'},
+            {'label': 'Simplified', 'value': 'simplified'},
+            {'label': 'COM-AF', 'value': 'comaf'}
+        ],
+        value='npoaf', 
         style={'margin-left': '5px'}
     )
 ])
 
 
-#### Create miniature cards to display calculated scores on page 2 <a id="minicards"></a>
+#### Create miniature cards to display calculated scores on page 2 
+### --> AFRI Minicard
 minicard1 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='afri-mini', className="card-val1",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='afri-mini', className="card-val1"),
             html.P(
                 ["AFRI"], 
                 className="card-text1",
@@ -320,10 +311,11 @@ minicard1 = dbc.Card(
         ])
 )
 
+### --> CHADS Minicard
 minicard2 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='chads-mini', className="card-val2",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='chads-mini', className="card-val2"),
             html.P(
                 ["CHA2DS2-VASc"], 
                 className="card-text2",
@@ -332,10 +324,11 @@ minicard2 = dbc.Card(
         ])
 )
 
+### --> POAF Minicard
 minicard3 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='poaf-mini', className="card-val3",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='poaf-mini', className="card-val3"),
             html.P(
                 ["POAF"], 
                 className="card-text3",
@@ -344,10 +337,11 @@ minicard3 = dbc.Card(
         ])
 )
 
+### --> NPOAF Minicard
 minicard4 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='npoaf-mini', className="card-val4",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='npoaf-mini', className="card-val4"),
             html.P(
                 ["NPOAF"], 
                 className="card-text4",
@@ -356,10 +350,11 @@ minicard4 = dbc.Card(
         ])
 )
 
+### --> Simplified Minicard
 minicard5 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='simplified-mini', className="card-val5",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='simplified-mini', className="card-val5"),
             html.P(
                 ["Simplified POAF"], 
                 className="card-text5",
@@ -368,10 +363,11 @@ minicard5 = dbc.Card(
         ])
 )
 
+### --> COM-AF Minicard
 minicard6 = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(id='comaf-mini', className="card-val6",style={'textAlign': 'center', 'color':'slateblue'}),
+            html.H4(id='comaf-mini', className="card-val6"),
             html.P(
                 ["COM-AF"], 
                 className="card-text6",
@@ -389,84 +385,16 @@ minicards = html.Div([
         dbc.Col(minicard5, width=2),
         dbc.Col(minicard6, width=2)
     ])
-], style={'margin-top': '10px','margin-left': '10px'})   
+], style={'margin-top': '10px','margin-left': '10px'})
 
 
-#### Create a tab for AFRI results <a id="afri"></a>
-# --> AFRI results calculation
-### --> classify predicted AF outcome based on cut point
-df['a_AF'] = np.where((df['afri']>=2),1,0)
-### --> tabulate totals for TP, FP, FN, and TN
-a_TP = len(df[(df['AF']==1) & (df['a_AF']==1)])
-a_FP = len(df[(df['AF']==0) & (df['a_AF']==1)])
-a_FN = len(df[(df['AF']==1) & (df['a_AF']==0)])
-a_TN = len(df[(df['AF']==0) & (df['a_AF']==0)])
-### --> define the independent and response variables
-independent1 = df['afri']
-response1 = df['AF']
-### --> bulid the logistic regression model
-log1 = sm.Logit(response1,sm.add_constant(independent1)).fit() #use 'add_constant' to add the intercept to the model
-### --> format the CI for the estimate
-ci1 = np.exp(log1.conf_int(alpha=0.05)).drop(index="const", axis=0)
-ci1.columns = ["2.5%", "97.5%"]
-or1 = np.exp(log1.params['afri'].item())
-ci1_lower = ci1['2.5%'].item()
-ci1_higher = ci1['97.5%'].item()
-### --> format the results for the card
-AFRI_OR = round(or1, 2)
-AFRI_lower = round(ci1_lower,2)
-AFRI_higher = round(ci1_higher,2)
-AFRI_se = round((a_TP/(a_TP+a_FN))*100)
-AFRI_sp = round((a_TN/(a_TN+a_FP))*100)
-AFRI_ppv = round((a_TP/(a_TP+a_FP))*100)
-AFRI_npv = round((a_TN/(a_TN+a_FN))*100)
-
-# --> AFRI histogram
-### --> apply dashboard formatting to figure
-load_figure_template("lux")
-### --> establish histogram
-fig1 = px.histogram(df, x="afri", histnorm="probability", color="AF", 
-                   color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
-                   labels={'AF':'Atrial Fibrillation', 'afri':'AFRI Score'})
-### --> update formatting
-newnames={'0': 'no', '1': 'yes'}
-fig1.for_each_trace(lambda t: t.update(name = newnames[t.name]))
-fig1.update_layout(title_text='AFRI Scores by Atrial Fibrillation Outcome', title_x=0.5)
-fig1.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'})
-fig1.update_layout(xaxis=dict(
-        linecolor="#BCCCDC",  # Sets color of X-axis line
-        showgrid=False, # Removes X-axis grid lines
-        fixedrange=True  
-    ),
-    yaxis=dict(
-        title="Probability",  
-        linecolor="#BCCCDC",  # Sets color of Y-axis line
-        showgrid=False, # Removes Y-axis grid lines
-        fixedrange=True      
-    ))
-fig1.update_layout(legend=dict(
-    yanchor="top",
-    y=0.99,
-    xanchor="left",
-    x=0.85
-))
-
+#### Create a tab for AFRI results 
 # --> AFRI results card and tab format
 ### --> output the results on a card
 card_afri = html.Div([
     dbc.Row([
         dbc.Col([
-            dbc.Card(
-                dbc.CardBody(
-                [
-                    html.P(["Odds Ratio: ", AFRI_OR, " (95% CI: ", AFRI_lower, "-", AFRI_higher, ")"], className="afri1"),
-                    html.P("Cut Point: 2"),
-                    html.P(["Sensitivity: ", AFRI_se, "%"], className="afri2"),
-                    html.P(["Specificity: ", AFRI_sp, "%"], className="afri3"),
-                    html.P(["Positive Predictive Value: ", AFRI_ppv, "%"], className="afri4"),
-                    html.P(["Negative Predictive Value: ", AFRI_npv, "%"], className="afri5")
-                ]), 
-                style={'margin-right': '10px', 'margin-bottom': '10px'})
+            dbc.Card(id="afri-val", style={'margin-right': '10px', 'margin-bottom': '10px'})
         ], 
         width=10)
     ],
@@ -474,86 +402,18 @@ card_afri = html.Div([
 ])
 ### --> establish the format for the AFRI tab
 afri_tab = html.Div([
-    dcc.Graph(figure=fig1, style={'margin-right': '10px', 'margin-bottom': '10px'}),
+    html.Div(id="afri-hist", style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_afri
 ])
 
-
 #### Create a tab for CHADS results 
-# --> CHADS results calculation
-### --> classify predicted AF outcome based on cut point
-df['c_AF'] = np.where((df['chads2']>=4),1,0)
-### --> tabulate totals for TP, FP, FN, and TN
-c_TP = len(df[(df['AF']==1) & (df['c_AF']==1)])
-c_FP = len(df[(df['AF']==0) & (df['c_AF']==1)])
-c_FN = len(df[(df['AF']==1) & (df['c_AF']==0)])
-c_TN = len(df[(df['AF']==0) & (df['c_AF']==0)])
-### --> define the independent and response variables
-independent2 = df['chads2']
-response2 = df['AF']
-### --> bulid the logistic regression model
-log2 = sm.Logit(response2,sm.add_constant(independent2)).fit() #use 'add_constant' to add the intercept to the model
-### --> format the CI for the estimate
-ci2 = log2.conf_int(alpha=0.05).drop(index="const", axis=0)
-ci2.columns = ["2.5%", "97.5%"]
-or2 = np.exp(log2.params['chads2'].item())
-ci2_lower = ci2['2.5%'].item()
-ci2_higher = ci2['97.5%'].item()
-### --> format the results for the card
-CHADS_OR = round(or2, 2)
-CHADS_lower = round(ci2_lower,2)
-CHADS_higher = round(ci2_higher,2)
-CHADS_se = round((c_TP/(c_TP+c_FN))*100)
-CHADS_sp = round((c_TN/(c_TN+c_FP))*100)
-CHADS_ppv = round((c_TP/(c_TP+c_FP))*100)
-CHADS_npv = round((c_TN/(c_TN+c_FN))*100)
-
-# --> CHADS histogram
-### --> apply dashboard formatting to figure
-load_figure_template("lux")
-### --> establish histogram
-fig2 = px.histogram(df, x="chads2", histnorm="probability", color="AF", 
-                   color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
-                   labels={'AF':'Atrial Fibrillation', 'chads2':'CHA2DS2-VASc Score'})
-### --> update formatting
-newnames={'0': 'no', '1': 'yes'}
-fig2.for_each_trace(lambda t: t.update(name = newnames[t.name]))
-fig2.update_layout(title_text='CHA2DS2-VASc Scores by Atrial Fibrillation Outcome', title_x=0.5)
-fig2.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'})
-fig2.update_layout(xaxis=dict(
-        linecolor="#BCCCDC",  # Sets color of X-axis line
-        showgrid=False, # Removes X-axis grid lines
-        fixedrange=True  
-    ),
-    yaxis=dict(
-        title="Probability",  
-        linecolor="#BCCCDC",  # Sets color of Y-axis line
-        showgrid=False, # Removes Y-axis grid lines
-        fixedrange=True      
-    ))
-fig2.update_layout(legend=dict(
-    yanchor="top",
-    y=0.99,
-    xanchor="left",
-    x=0.85
-))
-
 # --> CHADS results card and tab format
+### --> output the results on a card
 ### --> output the results on a card
 card_chads = html.Div([
     dbc.Row([
         dbc.Col([
-            dbc.Card(
-                dbc.CardBody(
-                [
-                    html.P(["Odds Ratio: ", CHADS_OR, " (95% CI: ", CHADS_lower, "-", CHADS_higher, ")"], className="chads1"),
-                    html.P("Cut Point: 4"),
-                    html.P(["Sensitivity: ", CHADS_se, "%"], className="chads2"),
-                    html.P(["Specificity: ", CHADS_sp, "%"], className="chads3"),
-                    html.P(["Positive Predictive Value: ", CHADS_ppv, "%"], className="chads4"),
-                    html.P(["Negative Predictive Value: ", CHADS_npv, "%"], className="chads5")
-                ]), 
-                style={'margin-right': '10px', 'margin-bottom': '10px'})
+            dbc.Card(id="chads-val", style={'margin-right': '10px', 'margin-bottom': '10px'})
         ], 
         width=10)
     ],
@@ -561,86 +421,17 @@ card_chads = html.Div([
 ])
 ### --> establish the format for the CHADS tab
 chads_tab = html.Div([
-    dcc.Graph(figure=fig2, style={'margin-right': '10px', 'margin-bottom': '10px'}),
+    html.Div(id="chads-hist", style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_chads
 ])
 
-
 #### Create a tab for POAF results
-# --> POAF results calculation
-### --> classify predicted AF outcome based on cut point
-df['p_AF'] = np.where((df['poaf']>=3),1,0)
-### --> tabulate totals for TP, FP, FN, and TN
-p_TP = len(df[(df['AF']==1) & (df['p_AF']==1)])
-p_FP = len(df[(df['AF']==0) & (df['p_AF']==1)])
-p_FN = len(df[(df['AF']==1) & (df['p_AF']==0)])
-p_TN = len(df[(df['AF']==0) & (df['p_AF']==0)])
-### --> define the independent and response variables
-independent3 = df['poaf']
-response3 = df['AF']
-### --> bulid the logistic regression model
-log3 = sm.Logit(response3,sm.add_constant(independent3)).fit() #use 'add_constant' to add the intercept to the model
-### --> format the CI for the estimate
-ci3 = np.exp(log3.conf_int(alpha=0.05)).drop(index="const", axis=0)
-ci3.columns = ["2.5%", "97.5%"]
-or3 = np.exp(log3.params['poaf'].item())
-ci3_lower = ci3['2.5%'].item()
-ci3_higher = ci3['97.5%'].item()
-### --> format the results for the card
-POAF_OR = round(or3, 2)
-POAF_lower = round(ci3_lower,2)
-POAF_higher = round(ci3_higher,2)
-POAF_se = round((p_TP/(p_TP+p_FN))*100)
-POAF_sp = round((p_TN/(p_TN+p_FP))*100)
-POAF_ppv = round((p_TP/(p_TP+p_FP))*100)
-POAF_npv = round((p_TN/(p_TN+p_FN))*100)
-
-# --> POAF histogram
-### --> apply dashboard formatting to figure
-load_figure_template("lux")
-### --> establish histogram
-fig3 = px.histogram(df, x="poaf", histnorm="probability", color="AF", 
-                   color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
-                   labels={'AF':'Atrial Fibrillation', 'poaf':'POAF Score'})
-### --> update formatting
-newnames={'0': 'no', '1': 'yes'}
-fig3.for_each_trace(lambda t: t.update(name = newnames[t.name]))
-fig3.update_layout(title_text='POAF Scores by Atrial Fibrillation Outcome', title_x=0.5)
-fig3.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'})
-fig3.update_layout(xaxis=dict(
-        linecolor="#BCCCDC",  # Sets color of X-axis line
-        showgrid=False, # Removes X-axis grid lines
-        fixedrange=True  
-    ),
-    yaxis=dict(
-        title="Probability",  
-        linecolor="#BCCCDC",  # Sets color of Y-axis line
-        showgrid=False, # Removes Y-axis grid lines
-        fixedrange=True      
-    ))
-fig3.update_layout(legend=dict(
-    yanchor="top",
-    y=0.99,
-    xanchor="left",
-    x=0.85
-))
-
 # --> POAF results card and tab format
 ### --> output the results on a card
 card_poaf = html.Div([
     dbc.Row([
         dbc.Col([
-            dbc.Card(
-                dbc.CardBody(
-                [
-                    html.P(["Odds Ratio: ", POAF_OR, " (95% CI: ", POAF_lower, "-", POAF_higher, ")"], className="poaf1"),
-                    html.P("Cut Point: 3"),
-                    html.P(["Sensitivity: ", POAF_se, "%"], className="poaf2"),
-                    html.P(["Specificity: ", POAF_sp, "%"], className="poaf3"),
-                    html.P(["Positive Predictive Value: ", POAF_ppv, "%"], className="poaf4"),
-                    html.P(["Negative Predictive Value: ", POAF_npv, "%"], className="poaf5")
-                ]), 
-                style={'margin-right': '10px', 'margin-bottom': '10px'})
+            dbc.Card(id="poaf-val", style={'margin-right': '10px', 'margin-bottom': '10px'})
         ], 
         width=10)
     ],
@@ -648,86 +439,17 @@ card_poaf = html.Div([
 ])
 ### --> establish the format for the POAF tab
 poaf_tab = html.Div([
-    dcc.Graph(figure=fig3, style={'margin-right': '10px', 'margin-bottom': '10px'}),
+    html.Div(id="poaf-hist", style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_poaf
 ])
 
-
 #### Create a tab for NPOAF results
-# --> NPOAF results calculation
-### --> classify predicted AF outcome based on cut point
-df['n_AF'] = np.where((df['npoaf']>=2),1,0)
-### --> tabulate totals for TP, FP, FN, and TN
-n_TP = len(df[(df['AF']==1) & (df['n_AF']==1)])
-n_FP = len(df[(df['AF']==0) & (df['n_AF']==1)])
-n_FN = len(df[(df['AF']==1) & (df['n_AF']==0)])
-n_TN = len(df[(df['AF']==0) & (df['n_AF']==0)])
-### --> define the independent and response variables
-independent4 = df['npoaf']
-response4 = df['AF']
-### --> bulid the logistic regression model
-log4 = sm.Logit(response4,sm.add_constant(independent4)).fit() #use 'add_constant' to add the intercept to the model
-### --> format the CI for the estimate
-ci4 = np.exp(log4.conf_int(alpha=0.05)).drop(index="const", axis=0)
-ci4.columns = ["2.5%", "97.5%"]
-or4 = np.exp(log4.params['npoaf'].item())
-ci4_lower = ci4['2.5%'].item()
-ci4_higher = ci4['97.5%'].item()
-### --> format the results for the card
-NPOAF_OR = round(or4, 2)
-NPOAF_lower = round(ci4_lower,2)
-NPOAF_higher = round(ci4_higher,2)
-NPOAF_se = round((n_TP/(n_TP+n_FN))*100)
-NPOAF_sp = round((n_TN/(n_TN+n_FP))*100)
-NPOAF_ppv = round((n_TP/(n_TP+n_FP))*100)
-NPOAF_npv = round((n_TN/(n_TN+n_FN))*100)
-
-# --> NPOAF histogram
-### --> apply dashboard formatting to figure
-load_figure_template("lux")
-### --> establish histogram
-fig4 = px.histogram(df, x="npoaf", histnorm="probability", color="AF", 
-                   color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
-                   labels={'AF':'Atrial Fibrillation', 'npoaf':'NPOAF Score'})
-### --> update formatting
-newnames={'0': 'no', '1': 'yes'}
-fig4.for_each_trace(lambda t: t.update(name = newnames[t.name]))
-fig4.update_layout(title_text='NPOAF Scores by Atrial Fibrillation Outcome', title_x=0.5)
-fig4.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'})
-fig4.update_layout(xaxis=dict(
-        linecolor="#BCCCDC",  # Sets color of X-axis line
-        showgrid=False, # Removes X-axis grid lines
-        fixedrange=True  
-    ),
-    yaxis=dict(
-        title="Probability",  
-        linecolor="#BCCCDC",  # Sets color of Y-axis line
-        showgrid=False, # Removes Y-axis grid lines
-        fixedrange=True      
-    ))
-fig4.update_layout(legend=dict(
-    yanchor="top",
-    y=0.99,
-    xanchor="left",
-    x=0.85
-))
-
 # --> NPOAF results card and tab format
 ### --> output the results on a card
 card_npoaf = html.Div([
     dbc.Row([
         dbc.Col([
-            dbc.Card(
-                dbc.CardBody(
-                [
-                    html.P(["Odds Ratio: ", NPOAF_OR, " (95% CI: ", NPOAF_lower, "-", NPOAF_higher, ")"], className="poaf1"),
-                    html.P("Cut Point: 2"),
-                    html.P(["Sensitivity: ", NPOAF_se, "%"], className="poaf2"),
-                    html.P(["Specificity: ", NPOAF_sp, "%"], className="poaf3"),
-                    html.P(["Positive Predictive Value: ", NPOAF_ppv, "%"], className="poaf4"),
-                    html.P(["Negative Predictive Value: ", NPOAF_npv, "%"], className="poaf5")
-                ]), 
-                style={'margin-right': '10px', 'margin-bottom': '10px'})
+            dbc.Card(id="npoaf-val", style={'margin-right': '10px', 'margin-bottom': '10px'})
         ], 
         width=10)
     ],
@@ -735,185 +457,43 @@ card_npoaf = html.Div([
 ])
 ### --> establish the format for the NPOAF tab
 npoaf_tab = html.Div([
-    dcc.Graph(figure=fig4, style={'margin-right': '10px', 'margin-bottom': '10px'}),
+    html.Div(id="npoaf-hist", style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_npoaf
 ])
 
-
-#### Create a tab for Simplified POAF results <a id="simplified"></a>
-# --> Simplified POAF results calculation
-### --> classify predicted AF outcome based on cut point
-df['s_AF'] = np.where((df['simplified']>=3),1,0)
-### --> tabulate totals for TP, FP, FN, and TN
-s_TP = len(df[(df['AF']==1) & (df['s_AF']==1)])
-s_FP = len(df[(df['AF']==0) & (df['s_AF']==1)])
-s_FN = len(df[(df['AF']==1) & (df['s_AF']==0)])
-s_TN = len(df[(df['AF']==0) & (df['s_AF']==0)])
-### --> define the independent and response variables
-independent5 = df['simplified']
-response5 = df['AF']
-### --> bulid the logistic regression model
-log5 = sm.Logit(response5,sm.add_constant(independent5)).fit() #use 'add_constant' to add the intercept to the model
-### --> format the CI for the estimate
-ci5 = np.exp(log5.conf_int(alpha=0.05)).drop(index="const", axis=0)
-ci5.columns = ["2.5%", "97.5%"]
-or5 = np.exp(log5.params['simplified'].item())
-ci5_lower = ci5['2.5%'].item()
-ci5_higher = ci5['97.5%'].item()
-### --> format the results for the card
-Simplified_OR = round(or5, 2)
-Simplified_lower = round(ci5_lower,2)
-Simplified_higher = round(ci5_higher,2)
-Simplified_se = round((s_TP/(s_TP+s_FP))*100)
-Simplified_sp = round((s_TN/(s_TN+s_FP))*100)
-Simplified_ppv = round((s_TP/(s_TP+s_FP))*100)
-Simplified_npv = round((s_TN/(s_TN+s_FN))*100)
-
-
-# --> Simplified POAF histogram
-### --> apply dashboard formatting to figure
-load_figure_template("lux")
-### --> establish histogram
-fig5 = px.histogram(df, x="simplified", histnorm="probability", color="AF", 
-                   color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
-                   labels={'AF':'Atrial Fibrillation', 'simplified':'Simplified POAF Score'})
-### --> update formatting
-newnames={'0': 'no', '1': 'yes'}
-fig5.for_each_trace(lambda t: t.update(name = newnames[t.name]))
-fig5.update_layout(title_text='Simplified POAF Scores by Atrial Fibrillation Outcome', title_x=0.5)
-fig5.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'})
-fig5.update_layout(xaxis=dict(
-        linecolor="#BCCCDC",  # Sets color of X-axis line
-        showgrid=False, # Removes X-axis grid lines
-        fixedrange=True  
-    ),
-    yaxis=dict(
-        title="Probability",  
-        linecolor="#BCCCDC",  # Sets color of Y-axis line
-        showgrid=False, # Removes Y-axis grid lines
-        fixedrange=True      
-    ))
-fig5.update_layout(legend=dict(
-    yanchor="top",
-    y=0.99,
-    xanchor="left",
-    x=0.85
-))
-
-
+#### Create a tab for Simplified POAF results
 # --> Simplified POAF results card and tab format
 ### --> output the results on a card
 card_simplified = html.Div([
     dbc.Row([
         dbc.Col([
-            dbc.Card(
-                dbc.CardBody(
-                [
-                    html.P(["Odds Ratio: ", Simplified_OR, " (95% CI: ", Simplified_lower, "-", Simplified_higher, ")"], className="sim1"),
-                    html.P("Cut Point: 3"),
-                    html.P(["Sensitivity: ", Simplified_se, "%"], className="sim2"),
-                    html.P(["Specificity: ", Simplified_sp, "%"], className="sim3"),
-                    html.P(["Positive Predictive Value: ", Simplified_ppv, "%"], className="sim4"),
-                    html.P(["Negative Predictive Value: ", POAF_npv, "%"], className="sim5")
-                ]), 
-                style={'margin-right': '10px', 'margin-bottom': '10px'})
+            dbc.Card(id="simplified-val", style={'margin-right': '10px', 'margin-bottom': '10px'})
         ], 
         width=10)
     ],
     justify='center')
 ])
-### --> establish the format for the AFRI tab
+### --> establish the format for the Simplified tab
 simplified_tab = html.Div([
-    dcc.Graph(figure=fig5, style={'margin-right': '10px', 'margin-bottom': '10px'}),
+    html.Div(id="simplified-hist", style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_simplified
 ])
 
-
 #### Create a tab for COM-AF results
-# --> COM-AF results calculation
-### --> classify predicted AF outcome based on cut point
-df['co_AF'] = np.where((df['comaf']>=3),1,0)
-### --> tabulate totals for TP, FP, FN, and TN
-co_TP = len(df[(df['AF']==1) & (df['co_AF']==1)])
-co_FP = len(df[(df['AF']==0) & (df['co_AF']==1)])
-co_FN = len(df[(df['AF']==1) & (df['co_AF']==0)])
-co_TN = len(df[(df['AF']==0) & (df['co_AF']==0)])
-### --> define the independent and response variables
-independent6 = df['comaf']
-response6 = df['AF']
-### --> bulid the logistic regression model
-log6 = sm.Logit(response6,sm.add_constant(independent6)).fit() #use 'add_constant' to add the intercept to the model
-### --> format the CI for the estimate
-ci6 = np.exp(log6.conf_int(alpha=0.05)).drop(index="const", axis=0)
-ci6.columns = ["2.5%", "97.5%"]
-or6 = np.exp(log6.params['comaf'].item())
-ci6_lower = ci6['2.5%'].item()
-ci6_higher = ci6['97.5%'].item()
-### --> format the results for the card
-COMAF_OR = round(or6, 2)
-COMAF_lower = round(ci6_lower,2)
-COMAF_higher = round(ci6_higher,2)
-COMAF_se = round((co_TP/(co_TP+co_FN))*100)
-COMAF_sp = round((co_TN/(co_TN+co_FP))*100)
-COMAF_ppv = round((co_TP/(co_TP+co_FP))*100)
-COMAF_npv = round((co_TN/(co_TN+co_FN))*100)
-
-
-# --> COM-AF histogram
-### --> apply dashboard formatting to figure
-load_figure_template("lux")
-### --> establish histogram
-fig6 = px.histogram(df, x="comaf", histnorm="probability", color="AF", 
-                   color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
-                   labels={'AF':'Atrial Fibrillation', 'comaf':'COM-AF Score'})
-### --> update formatting
-newnames={'0': 'no', '1': 'yes'}
-fig6.for_each_trace(lambda t: t.update(name = newnames[t.name]))
-fig6.update_layout(title_text='COM-AF Scores by Atrial Fibrillation Outcome', title_x=0.5)
-fig6.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'})
-fig6.update_layout(xaxis=dict(
-        linecolor="#BCCCDC",  # Sets color of X-axis line
-        showgrid=False, # Removes X-axis grid lines
-        fixedrange=True  
-    ),
-    yaxis=dict(
-        title="Probability",  
-        linecolor="#BCCCDC",  # Sets color of Y-axis line
-        showgrid=False, # Removes Y-axis grid lines
-        fixedrange=True      
-    ))
-fig6.update_layout(legend=dict(
-    yanchor="top",
-    y=0.99,
-    xanchor="left",
-    x=0.85
-))
-
-
 # --> COM-AF results card and tab format
 ### --> output the results on a card
 card_comaf = html.Div([
     dbc.Row([
         dbc.Col([
-            dbc.Card(
-                dbc.CardBody(
-                [
-                    html.P(["Odds Ratio: ", COMAF_OR, " (95% CI: ", COMAF_lower, "-", COMAF_higher, ")"], className="comaf1"),
-                    html.P("Cut Point: 3"),
-                    html.P(["Sensitivity: ", COMAF_se, "%"], className="comaf2"),
-                    html.P(["Specificity: ", COMAF_sp, "%"], className="comaf3"),
-                    html.P(["Positive Predictive Value: ", COMAF_ppv, "%"], className="comaf4"),
-                    html.P(["Negative Predictive Value: ", COMAF_npv, "%"], className="comaf5")
-                ]), 
-                style={'margin-right': '10px', 'margin-bottom': '10px'})
+            dbc.Card(id="comaf-val", style={'margin-right': '10px', 'margin-bottom': '10px'})
         ], 
         width=10)
     ],
     justify='center')
 ])
-### --> establish the format for the AFRI tab
+### --> establish the format for the COM-AF tab
 comaf_tab = html.Div([
-    dcc.Graph(figure=fig6, style={'margin-right': '10px', 'margin-bottom': '10px'}),
+    html.Div(id="comaf-hist", style={'margin-right': '10px', 'margin-bottom': '10px'}),
     card_comaf
 ])
 
@@ -922,13 +502,13 @@ comaf_tab = html.Div([
 #### Define the tabs for the risk scores
 score_tab = dbc.Tabs(
             [
-                dbc.Tab(afri_tab, label="AFRI", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center"),
-                dbc.Tab(chads_tab, label="CHADS", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center"),
-                dbc.Tab(poaf_tab, label="POAF", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center"),
-                dbc.Tab(npoaf_tab, label="NPOAF", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center"),
-                dbc.Tab(simplified_tab, label="Simplified POAF", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center"),
-                dbc.Tab(comaf_tab, label="COM-AF", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center"),
-            ]
+                dbc.Tab(afri_tab, label="AFRI", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center", tab_id="afri-tab"),
+                dbc.Tab(chads_tab, label="CHADS", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center", tab_id="chads-tab"),
+                dbc.Tab(poaf_tab, label="POAF", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center", tab_id="poaf-tab"),
+                dbc.Tab(npoaf_tab, label="NPOAF", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center", tab_id="npoaf-tab"),
+                dbc.Tab(simplified_tab, label="Simplified POAF", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center", tab_id="simplified-tab"),
+                dbc.Tab(comaf_tab, label="COM-AF", activeTabClassName="fw-bold", tabClassName="flex-grow-1 text-center", tab_id="comaf-tab"),
+            ], id="score-tab"
         )
 
 
@@ -939,18 +519,16 @@ tab1 = dbc.Row(
                 dbc.Col([card1, card2, card3, card4, card5, card6], width=4),
             ]
         )
-
 tab2 = dbc.Row(
             [
                 dbc.Col([
-                    dcc.Graph(figure=fig, style={'margin-left': '10px'}),
+                    dcc.Graph(id="stripchart", style={'margin-left': '10px'}),
                     dropdowns,
                     minicards
                 ], width=6),
                 dbc.Col(score_tab, width=6),
             ]
         )
-
 
 #### Define the app layout
 app.layout = html.Div(
@@ -971,18 +549,47 @@ app.layout = html.Div(
                 dbc.Tab(tab1, label="Calculate Patient Scores", active_tab_style={"textTransform": "uppercase"}),
                 dbc.Tab(tab2, label="Compare Scores", active_tab_style={"textTransform": "uppercase"}),
             ]
-        )
+        ),
+        store_data,
+        afri_state,
+        chads_state,
+        poaf_state,
+        npoaf_state,
+        simplified_state,
+        comaf_state
     ],
     style={'background-color': '#EEF3F8'}
 )
 
 
 ### App Callbacks and Configuration
+#### Establish a function for the input dataset
+default_data = pd.read_csv('../../Data/risk.csv')
+
+def parse_contents(contents, filename, date):
+    content_type, content_string = contents.split(',')
+
+    decoded = base64.b64decode(content_string)
+    try:
+        if 'csv' in filename:
+            # Assume that the user uploaded a CSV file
+            df = pd.read_csv(
+                io.StringIO(decoded.decode('utf-8')))
+        elif 'xls' in filename:
+            # Assume that the user uploaded an excel file
+            df = pd.read_excel(io.BytesIO(decoded))
+        return df
+    except Exception as e:
+        print(e)
+
 #### Establish a callback for AFRI Calculation
 @app.callback(
     [
-        dash.dependencies.Output('afri-val', 'children'),
+        dash.dependencies.Output('afri-card', 'children'),
+        dash.dependencies.Output('afri-card', 'style'),
         dash.dependencies.Output('afri-mini', 'children'),
+        dash.dependencies.Output('afri-mini', 'style'),
+        dash.dependencies.Output('afri-state', 'data')
     ],
     [
         dash.dependencies.Input('submit-button', 'n_clicks')
@@ -1025,14 +632,25 @@ def afri_calc(button_click, age_state, gender_state, weight_state, height_state,
     else: 
         afri=None
     afri2 = afri
-    return afri, afri2
+    afri3 = afri
+    if afri==None:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    elif afri>=2:
+        style={'textAlign': 'center', 'color':'crimson'}
+    else:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    style2 = style
+    return afri, style, afri2, style2, afri3
 
 
 #### Establish a callback for CHADS Calculation
 @app.callback(
     [
-        dash.dependencies.Output('chads-val', 'children'),
+        dash.dependencies.Output('chads-card', 'children'),
+        dash.dependencies.Output('chads-card', 'style'),
         dash.dependencies.Output('chads-mini', 'children'),
+        dash.dependencies.Output('chads-mini', 'style'),
+        dash.dependencies.Output('chads-state', 'data')
     ],
     [
         dash.dependencies.Input('submit-button', 'n_clicks')
@@ -1073,14 +691,25 @@ def chads_calc(button_click, age_state, gender_state, weight_state, height_state
     else: 
         chads=None
     chads2 = chads
-    return chads, chads2
+    chads3 = chads
+    if chads==None:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    elif chads>=4:
+        style={'textAlign': 'center', 'color':'crimson'}
+    else:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    style2 = style
+    return chads, style, chads2, style2, chads3
 
 
 #### Establish a callback for POAF Calculation
 @app.callback(
     [
-        dash.dependencies.Output('poaf-val', 'children'),
+        dash.dependencies.Output('poaf-card', 'children'),
+        dash.dependencies.Output('poaf-card', 'style'),
         dash.dependencies.Output('poaf-mini', 'children'),
+        dash.dependencies.Output('poaf-mini', 'style'),
+        dash.dependencies.Output('poaf-state', 'data')
     ],
     [
         dash.dependencies.Input('submit-button', 'n_clicks')
@@ -1123,14 +752,25 @@ def poaf_calc(button_click, age_state, gender_state, weight_state, height_state,
     else: 
         poaf=None
     poaf2 = poaf
-    return poaf, poaf2
+    poaf3 = poaf
+    if poaf==None:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    elif poaf>=3:
+        style={'textAlign': 'center', 'color':'crimson'}
+    else:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    style2 = style
+    return poaf, style, poaf2, style2, poaf3
 
 
 #### Establish a callback for NPOAF Calculation
 @app.callback(
     [
-        dash.dependencies.Output('npoaf-val', 'children'),
+        dash.dependencies.Output('npoaf-card', 'children'),
+        dash.dependencies.Output('npoaf-card', 'style'),
         dash.dependencies.Output('npoaf-mini', 'children'),
+        dash.dependencies.Output('npoaf-mini', 'style'),
+        dash.dependencies.Output('npoaf-state', 'data')
     ],
     [
         dash.dependencies.Input('submit-button', 'n_clicks')
@@ -1165,14 +805,25 @@ def npoaf_calc(button_click, age_state, gender_state, weight_state, height_state
     else: 
         npoaf=None
     npoaf2 = npoaf
-    return npoaf, npoaf2
+    npoaf3 = npoaf
+    if npoaf==None:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    elif npoaf>=2:
+        style={'textAlign': 'center', 'color':'crimson'}
+    else:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    style2 = style
+    return npoaf, style, npoaf2, style2, npoaf3
 
 
 #### Establish a callback for Simplified POAF Calculation
 @app.callback(
     [
-        dash.dependencies.Output('simplified-val', 'children'),
+        dash.dependencies.Output('simplified-card', 'children'),
+        dash.dependencies.Output('simplified-card', 'style'),
         dash.dependencies.Output('simplified-mini', 'children'),
+        dash.dependencies.Output('simplified-mini', 'style'),
+        dash.dependencies.Output('simplified-state', 'data')
     ],
     [
         dash.dependencies.Input('submit-button', 'n_clicks')
@@ -1205,14 +856,25 @@ def simplified_calc(button_click, age_state, gender_state, weight_state, height_
     else: 
         simplified=None
     simplified2 = simplified
-    return simplified, simplified2
+    simplified3 = simplified
+    if simplified==None:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    elif simplified>=3:
+        style={'textAlign': 'center', 'color':'crimson'}
+    else:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    style2 = style
+    return simplified, style, simplified2, style2, simplified3
 
 
 #### Establish a callback for COM-AF Calculation
 @app.callback(
     [
-        dash.dependencies.Output('comaf-val', 'children'),
+        dash.dependencies.Output('comaf-card', 'children'),
+        dash.dependencies.Output('comaf-card', 'style'),
         dash.dependencies.Output('comaf-mini', 'children'),
+        dash.dependencies.Output('comaf-mini', 'style'),
+        dash.dependencies.Output('comaf-state', 'data')
     ],
     [
         dash.dependencies.Input('submit-button', 'n_clicks')
@@ -1249,19 +911,341 @@ def comaf_calc(button_click, age_state, gender_state, weight_state, height_state
     else: 
         comaf=None
     comaf2 = comaf
-    return comaf, comaf2
+    comaf3 = comaf
+    if comaf==None:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    elif comaf>=3:
+        style={'textAlign': 'center', 'color':'crimson'}
+    else:
+        style={'textAlign': 'center', 'color':'slateblue'}
+    style2 = style
+    return comaf, style, comaf2, style2, comaf3
+
+#### Establish a callback for the comparison graph
+@app.callback(
+    dash.dependencies.Output('stripchart', 'figure'),
+    [
+        dash.dependencies.Input('upload-data', 'contents'),
+        dash.dependencies.Input('upload-data', 'filename'),
+        dash.dependencies.Input('afri-state', 'data'),
+        dash.dependencies.Input('chads-state', 'data'),
+        dash.dependencies.Input('poaf-state', 'data'),
+        dash.dependencies.Input('npoaf-state', 'data'),
+        dash.dependencies.Input('simplified-state', 'data'),
+        dash.dependencies.Input('comaf-state', 'data'),
+        dash.dependencies.Input('crossfilter-xaxis-column', 'value'),
+        dash.dependencies.Input('crossfilter-yaxis-column', 'value')
+    ]
+    )
+def compare_graph(contents, filename, afri_val, chads_val, poaf_val, npoaf_val, simplified_val, comaf_val, xaxis, yaxis):
+    #### Create a graph to compare risk scores two at a time 
+    if contents is not None:
+        df = parse_contents(contents, filename)
+    else:
+        df = default_data
+    fig = px.strip(x=df[xaxis], y=df[yaxis], color=df['AF'], 
+                    color_discrete_map = {0:'midnightblue',1:'lightsteelblue'},
+                    labels={'AF':'Atrial Fibrillation', 'npoaf':'NPOAF Score', 'afri': 'AFRI Score'})
+    newnames={'0': 'no', '1': 'yes'}
+    fig.for_each_trace(lambda t: t.update(name = newnames[t.name]))
+    fig.update_layout(title_text='Comparison of Two Scores', title_x=0.5)
+    fig.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'})
+    fig.update_layout(
+        xaxis=dict(
+            title=xaxis,
+            linecolor="#BCCCDC",  # Sets color of X-axis line
+            showgrid=False, # Removes X-axis grid lines
+            fixedrange=True  
+        ),
+        yaxis=dict(
+            title=yaxis,
+            linecolor="#BCCCDC",  # Sets color of Y-axis line
+            showgrid=False, # Removes Y-axis grid lines
+            fixedrange=True      
+        ))
+    if afri_val is not None:
+        if xaxis=='afri':
+            xval=afri_val
+        elif xaxis=='chads':
+            xval=chads_val
+        elif xaxis=='poaf':
+            xval=poaf_val
+        elif xaxis=='npoaf':
+            xval=npoaf_val
+        elif xaxis=='simplified':
+            xval=simplified_val
+        elif yaxis=='comaf':
+            xval=comaf_val
+        if yaxis=='afri':
+            yval=afri_val
+        elif yaxis=='chads':
+            yval=chads_val
+        elif yaxis=='poaf':
+            yval=poaf_val
+        elif yaxis=='npoaf':
+            yval=npoaf_val
+        elif yaxis=='simplified':
+            yval=simplified_val
+        elif yaxis=='comaf':
+            yval=comaf_val
+        figa = fig
+        figa.add_trace(
+            go.Scatter(
+                x=[xval],
+                y=[yval],
+                mode="markers",
+                marker=dict(color="crimson"),
+                showlegend=False)
+        )
+        return figa
+    else:
+        return fig
+
+
+#### Establish a callback for calculating validation metrics
+@app.callback(
+    [
+        dash.dependencies.Output('afri-val', 'children'),
+        dash.dependencies.Output('chads-val', 'children'),
+        dash.dependencies.Output('poaf-val', 'children'),
+        dash.dependencies.Output('npoaf-val', 'children'),
+        dash.dependencies.Output('simplified-val', 'children'),
+        dash.dependencies.Output('comaf-val', 'children')
+    ],
+    [
+        dash.dependencies.Input('upload-data', 'contents'),
+        dash.dependencies.Input('upload-data', 'filename'),
+        dash.dependencies.Input('afri-state', 'data'),
+        dash.dependencies.Input('chads-state', 'data'),
+        dash.dependencies.Input('poaf-state', 'data'),
+        dash.dependencies.Input('npoaf-state', 'data'),
+        dash.dependencies.Input('simplified-state', 'data'),
+        dash.dependencies.Input('comaf-state', 'data'),
+        dash.dependencies.Input('score-tab', 'active_tab')
+    ]
+)
+def score_val(contents, filename, afri_val, chads_val, poaf_val, npoaf_val, simplified_val, comaf_val, score_tab):
+    if contents is not None:
+        df = parse_contents(contents, filename)
+    else:
+        df = default_data
+    if score_tab == "afri-tab":
+        df['score'] = df['afri']
+        val = afri_val
+        cut = 2
+    elif score_tab == "chads-tab":
+        df['score'] = df['chads']
+        val = chads_val
+        cut = 4
+    elif score_tab == 'poaf-tab':
+        df['score'] = df['poaf']
+        val = poaf_val
+        cut = 3
+    elif score_tab == 'npoaf-tab':
+        df['score'] = df['npoaf']
+        val = npoaf_val
+        cut = 2
+    elif score_tab == 'simplified-tab':
+        df['score'] = df['simplified']
+        val = simplified_val
+        cut = 3
+    elif score_tab == 'comaf-tab':
+        df['score'] = df['comaf']
+        val = comaf_val
+        cut = 3
+    ### --> calculate percentile
+    if val is not None:
+        n_total = len(df)
+        n_less = len(df[df['score']<val])
+        percentile = round((n_less/n_total)*100)
+    else:
+        percentile=None
+    ### --> classify predicted AF outcome based on cut point
+    df['AF_cut'] = np.where((df['score']>=cut),1,0)
+    ### --> tabulate totals for TP, FP, FN, and TN
+    TP = len(df[(df['AF']==1) & (df['AF_cut']==1)])
+    FP = len(df[(df['AF']==0) & (df['AF_cut']==1)])
+    FN = len(df[(df['AF']==1) & (df['AF_cut']==0)])
+    TN = len(df[(df['AF']==0) & (df['AF_cut']==0)])
+    ### --> define the independent and response variables
+    independent1 = df['score']
+    response1 = df['AF']
+    ### --> bulid the logistic regression model
+    log1 = sm.Logit(response1,sm.add_constant(independent1)).fit() #use 'add_constant' to add the intercept to the model
+    ### --> format the CI for the estimate
+    ci1 = np.exp(log1.conf_int(alpha=0.05)).drop(index="const", axis=0)
+    ci1.columns = ["2.5%", "97.5%"]
+    or1 = np.exp(log1.params['score'].item())
+    ci1_lower = ci1['2.5%'].item()
+    ci1_higher = ci1['97.5%'].item()
+    ### --> format the results for the card
+    OR = round(or1, 2)
+    lower = round(ci1_lower,2)
+    higher = round(ci1_higher,2)
+    sensitivity = round((TP/(TP+FN))*100)
+    specificity = round((TN/(TN+FP))*100)
+    PPV = round((TP/(TP+FP))*100)
+    NPV = round((TN/(TN+FN))*100)
+    afri_val = dbc.CardBody([
+                    html.P(["Percentile: ", percentile, "%"]),
+                    html.P(["Odds Ratio: ", OR, " (95% CI: ", lower, "-", higher, ")"]),
+                    html.P(["Cut Point: ", cut]),
+                    html.P(["Sensitivity: ", sensitivity, "%"]),
+                    html.P(["Specificity: ", specificity, "%"]),
+                    html.P(["Positive Predictive Value: ", PPV, "%"]),
+                    html.P(["Negative Predictive Value: ", NPV, "%"])
+                ])
+    chads_val = dbc.CardBody([
+                    html.P(["Percentile: ", percentile, "%"]),
+                    html.P(["Odds Ratio: ", OR, " (95% CI: ", lower, "-", higher, ")"]),
+                    html.P(["Cut Point: ", cut]),
+                    html.P(["Sensitivity: ", sensitivity, "%"]),
+                    html.P(["Specificity: ", specificity, "%"]),
+                    html.P(["Positive Predictive Value: ", PPV, "%"]),
+                    html.P(["Negative Predictive Value: ", NPV, "%"])
+                ])
+    poaf_val = dbc.CardBody([
+                    html.P(["Percentile: ", percentile, "%"]),
+                    html.P(["Odds Ratio: ", OR, " (95% CI: ", lower, "-", higher, ")"]),
+                    html.P(["Cut Point: ", cut]),
+                    html.P(["Sensitivity: ", sensitivity, "%"]),
+                    html.P(["Specificity: ", specificity, "%"]),
+                    html.P(["Positive Predictive Value: ", PPV, "%"]),
+                    html.P(["Negative Predictive Value: ", NPV, "%"])
+                ])
+    npoaf_val = dbc.CardBody([
+                    html.P(["Percentile: ", percentile, "%"]),
+                    html.P(["Odds Ratio: ", OR, " (95% CI: ", lower, "-", higher, ")"]),
+                    html.P(["Cut Point: ", cut]),
+                    html.P(["Sensitivity: ", sensitivity, "%"]),
+                    html.P(["Specificity: ", specificity, "%"]),
+                    html.P(["Positive Predictive Value: ", PPV, "%"]),
+                    html.P(["Negative Predictive Value: ", NPV, "%"])
+                ])
+    simplified_val = dbc.CardBody([
+                    html.P(["Percentile: ", percentile, "%"]),
+                    html.P(["Odds Ratio: ", OR, " (95% CI: ", lower, "-", higher, ")"]),
+                    html.P(["Cut Point: ", cut]),
+                    html.P(["Sensitivity: ", sensitivity, "%"]),
+                    html.P(["Specificity: ", specificity, "%"]),
+                    html.P(["Positive Predictive Value: ", PPV, "%"]),
+                    html.P(["Negative Predictive Value: ", NPV, "%"])
+                ])
+    comaf_val = dbc.CardBody([
+                    html.P(["Percentile: ", percentile, "%"]),
+                    html.P(["Odds Ratio: ", OR, " (95% CI: ", lower, "-", higher, ")"]),
+                    html.P(["Cut Point: ", cut]),
+                    html.P(["Sensitivity: ", sensitivity, "%"]),
+                    html.P(["Specificity: ", specificity, "%"]),
+                    html.P(["Positive Predictive Value: ", PPV, "%"]),
+                    html.P(["Negative Predictive Value: ", NPV, "%"])
+                ])
+    return afri_val, chads_val, poaf_val, npoaf_val, simplified_val, comaf_val
+
+#### Establish a callback for producing score histograms
+@app.callback(
+    [
+        dash.dependencies.Output('afri-hist', 'children'),
+        dash.dependencies.Output('chads-hist', 'children'),
+        dash.dependencies.Output('poaf-hist', 'children'),
+        dash.dependencies.Output('npoaf-hist', 'children'),
+        dash.dependencies.Output('simplified-hist', 'children'),
+        dash.dependencies.Output('comaf-hist', 'children')
+    ],
+    [
+        dash.dependencies.Input('upload-data', 'contents'),
+        dash.dependencies.Input('upload-data', 'filename'),
+        dash.dependencies.Input('score-tab', 'active_tab')
+    ]
+)
+def afri_val(contents, filename, score_tab):
+    if contents is not None:
+        df = parse_contents(contents, filename)
+    else:
+        df = default_data
+    if score_tab == "afri-tab":
+        ### --> establish histogram
+        fig1 = px.histogram(df, x="afri", histnorm="probability", color="AF", 
+                           color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
+                           labels={'AF':'Atrial Fibrillation', 'afri':'AFRI Score'})
+        ### --> change figure title
+        fig1.update_layout(title_text='AFRI Scores by Atrial Fibrillation Outcome', title_x=0.5)
+    elif score_tab == "chads-tab":
+        ### --> establish histogram
+        fig1 = px.histogram(df, x="chads", histnorm="probability", color="AF", 
+                           color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
+                           labels={'AF':'Atrial Fibrillation', 'chads':'CHA2DS2-VASc Score'})
+        ### --> change figure title
+        fig1.update_layout(title_text='CHA2DS2-VASc Scores by Atrial Fibrillation Outcome', title_x=0.5)
+    elif score_tab == "poaf-tab":
+        ### --> establish histogram
+        fig1 = px.histogram(df, x="poaf", histnorm="probability", color="AF", 
+                           color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
+                           labels={'AF':'Atrial Fibrillation', 'poaf':'POAF Score'})
+        ### --> change figure title
+        fig1.update_layout(title_text='POAF Scores by Atrial Fibrillation Outcome', title_x=0.5)
+    elif score_tab == "npoaf-tab":
+        ### --> establish histogram
+        fig1 = px.histogram(df, x="npoaf", histnorm="probability", color="AF", 
+                           color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
+                           labels={'AF':'Atrial Fibrillation', 'npoaf':'NPOAF Score'})
+        ### --> change figure title
+        fig1.update_layout(title_text='NPOAF Scores by Atrial Fibrillation Outcome', title_x=0.5)
+    elif score_tab == "simplified-tab":
+        ### --> establish histogram
+        fig1 = px.histogram(df, x="simplified", histnorm="probability", color="AF", 
+                           color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
+                           labels={'AF':'Atrial Fibrillation', 'simplified':'Simplified POAF Score'})
+        ### --> change figure title
+        fig1.update_layout(title_text='Simplified POAF Scores by Atrial Fibrillation Outcome', title_x=0.5)
+    elif score_tab == "comaf-tab":
+        ### --> establish histogram
+        fig1 = px.histogram(df, x="comaf", histnorm="probability", color="AF", 
+                           color_discrete_map = {0:'midnightblue',1:'lightsteelblue'}, barmode='overlay', 
+                           labels={'AF':'Atrial Fibrillation', 'comaf':'COM-AF Score'})
+        ### --> change figure title
+        fig1.update_layout(title_text='COM-AF Scores by Atrial Fibrillation Outcome', title_x=0.5)
+    ### --> update formatting of the figure
+    newnames={'0': 'no', '1': 'yes'}
+    fig1.for_each_trace(lambda t: t.update(name = newnames[t.name]))
+    fig1.update_layout({'plot_bgcolor': 'rgba(0, 0, 0, 0)','paper_bgcolor': 'rgba(0, 0, 0, 0)'})
+    fig1.update_layout(xaxis=dict(
+            linecolor="#BCCCDC",  # Sets color of X-axis line
+            showgrid=False, # Removes X-axis grid lines
+            fixedrange=True  
+        ),
+        yaxis=dict(
+            title="Probability",  
+            linecolor="#BCCCDC",  # Sets color of Y-axis line
+            showgrid=False, # Removes Y-axis grid lines
+            fixedrange=True      
+        ))
+    fig1.update_layout(legend=dict(
+        yanchor="top",
+        y=0.99,
+        xanchor="left",
+        x=0.85
+    ))
+    afri_hist=dcc.Graph(figure=fig1)
+    chads_hist=dcc.Graph(figure=fig1)
+    poaf_hist=dcc.Graph(figure=fig1)
+    npoaf_hist=dcc.Graph(figure=fig1)
+    simplified_hist=dcc.Graph(figure=fig1)
+    comaf_hist=dcc.Graph(figure=fig1)
+    return afri_hist, chads_hist, poaf_hist, npoaf_hist, simplified_hist, comaf_hist
+
 
 
 #### Define a function for running the server with an option for specifying the port
-def run_server(self,
+def run_server(self, host,
                port=8050):
-    serve(self, host="0.0.0.0", port=port)
+    serve(self, host=host, port=port)
 
 
 #### Configure the settings to avoid an attribute error when using JupyterDash
 del app.config._read_only["requests_pathname_prefix"]
 
 
-#### Run the app (modify port as necessary to find one that is not in use)
-app.run_server(port=8050)
+#### Run the app (modify port as necessary to find one that is not in use; macOS users should change host to host='')
+app.run_server(host='', port=8050)
 
