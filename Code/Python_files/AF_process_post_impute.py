@@ -70,20 +70,20 @@ cabg_ind = pd.merge(pd.merge(pd.merge(pd.merge(egfr_calc, diagnoses, how='left',
                                                                                                   'ADMISSION_TYPE': 'type'})
 
 ### Create indicators for diagnoses and procedures
-# --> Congestive Heart Failure/Left Ventricular Dysfunction (CHADS2)
+# --> Congestive Heart Failure/Left Ventricular Dysfunction (CHADS)
 cabg_ind['chf'] = np.where(cabg_ind['d_ICD'].isin(['4280','4281']),1,0)
-# --> Hypertension (CHADS2)
+# --> Hypertension (CHADS)
 cabg_ind['hbp'] = np.where(cabg_ind['d_ICD'].isin(['4010','4011','4019']),1,0)
-# --> Diabetes Mellitus (CHADS2)
+# --> Diabetes Mellitus (CHADS)
 cabg_ind['dm'] = np.where(cabg_ind['d_ICD'].isin(['24900', '24901', '24910', '24911', '24920', '24921', '24930', '24931', '24940', '24941', '24950', '24951', '24960', 
                                                   '24961', '24970', '24971', '24980', '24981', '24990', '24991', '25000', '25001', '25002', '25003', '25010', '25011', 
                                                   '25012', '25013', '25020', '25021', '25022', '25023', '25030', '25031', '25032', '25033', '25040', '25041', '25042', 
                                                   '25043', '25050', '25051', '25052', '25053', '25060', '25061', '25062', '25063', '25070', '25071', '25072', '25073', 
                                                   '25080', '25081', '25082', '25083', '25090', '25091', '25092', '25093', '64800', '64801', '64802', '64803', '64804'
                                                  ]),1,0)
-# --> Stroke/Transient Ischemic Attack/Thromboembolism (CHADS2)
+# --> Stroke/Transient Ischemic Attack/Thromboembolism (CHADS)
 cabg_ind['stroke'] = np.where(cabg_ind['d_ICD'].isin(['V1254']),1,0)
-# --> Vascular Disease (CHADS2)
+# --> Vascular Disease (CHADS)
 cabg_ind['vd'] = np.where(cabg_ind['d_ICD'].isin(['393', '3940', '3941', '3942', '3949', '3950', '3951', '3952', '3959', '3960', '3961', '3962', '3963', '3968', 
                                                   '3969', '3970', '3971', '3979', '3980', '4010', '4011', '4019', '40200', '40201', '40210', '40211', '40290', 
                                                   '40291', '40300', '40310', '40311', '40390', '40391', '40400', '40401', '40402', '40403', '40410', '40411', '40412', 
@@ -178,26 +178,26 @@ def poaf(x):
         poaf=poaf+1
     return poaf
 
-### Establish a function to calculate CHADS2 (Cameron et al., 2018)
-def chads2(x):
-    chads2=0
+### Establish a function to calculate CHADS (Cameron et al., 2018)
+def chads(x):
+    chads=0
     if (x['chf'] == 1):
-        chads2=chads2+1
+        chads=chads+1
     if (x['hbp'] == 1):
-        chads2=chads2+1
+        chads=chads+1
     if (x['age'] >= 75):
-        chads2=chads2+2
+        chads=chads+2
     if (x['dm'] == 1):
-        chads2=chads2+1
+        chads=chads+1
     if (x['stroke'] == 1):
-        chads2=chads2+2
+        chads=chads+2
     if (x['pvd'] == 1):
-        chads2=chads2+1
+        chads=chads+1
     if (65 <= x['age'] <= 74):
-        chads2=chads2+1
+        chads=chads+1
     if (x['gender'] == 'F'):
-        chads2=chads2+1
-    return chads2
+        chads=chads+1
+    return chads
 
 ### Establish a function to calculate AFRI (Cameron et al., 2018)
 def afri(x):
@@ -269,7 +269,7 @@ def comaf(x):
 
 ### Apply the functions to calculate the risk scores
 indicators['poaf'] = indicators.apply(poaf, axis=1)
-indicators['chads2'] = indicators.apply(chads2, axis=1)
+indicators['chads'] = indicators.apply(chads, axis=1)
 indicators['afri'] = indicators.apply(afri, axis=1)
 indicators['npoaf'] = indicators.apply(npoaf, axis=1)
 indicators['simplified'] = indicators.apply(simplified, axis=1)
