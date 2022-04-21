@@ -1,9 +1,11 @@
-#load the mice package
-library(mice)
-library(here)
+#install and load mice and here packages
+if(!require("mice"))(install.packages("mice"))
+library("mice")
+if(!require("here"))(install.packages("here"))
+library("here")
 
 #set identify the location of the project
-i_am("Code/Processing/imp_creatinine.R")
+i_am("Code/Processing/Command_line_code/AF_impute.R")
 
 #read in the data
 na_creatinine <- read.csv(here("Data/MIMIC-III/na_creatinine.csv"))
