@@ -21,6 +21,89 @@ external_stylesheets = [dbc.themes.LUX]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets, assets_external_path='assets')
 
 ### App Features
+#### Add the text for the hover tooltips
+#Dataset specification requirements explanation
+upload_tip = html.Div([
+    html.P("Upload your own reference dataset to compare your patient to a well-matched population"),
+    html.P("File types accepted: .csv, .txt, .xlsx"),
+    html.P("Data should have columns for each calculated score and the atrial fibrillation outcome"),
+    html.P("To fit the parameters of the dashboard, column names should be as follows" 
+           " (if using other column names, you must adjust code accordingly): "
+           "'afri', 'chads', 'poaf', 'npoaf', 'simplified', 'comaf', 'AF'")
+])
+
+#AFRI calculation explanation
+afri_tip = html.Div([
+    html.P("Score Range: 0-4"),
+    html.P("Males:"),
+    html.P("Age 60+ years: +1"),
+    html.P("Weight 76+ kg: +1"),
+    html.P("Height 176+ kg: +1"),
+    html.P("Peripheral Vascular Disease: +1"),
+    html.P("Females:"),
+    html.P("Age 66+ years: +1"),
+    html.P("Weight 64+ kg: +1"),
+    html.P("Height 168+ kg: +1"),
+    html.P("Peripheral Vascular Disease: +1"),
+])
+
+#CHA2DS2-VASc calculation explanation
+chads_tip = html.Div([
+    html.P("Score Range: 0-8"),
+    html.P("Age 65-74 years: +1"),
+    html.P("Age 75+ years: +2"),
+    html.P("Congestive Heart Failure: +1"),
+    html.P("High Blood Pressure: +1"),
+    html.P("Diabetes: +1"),
+    html.P("History of Stroke: +1"),
+    html.P("Peripheral Vascular Disease: +1"),
+    html.P("Female: +1"),
+])
+
+#POAF calculation explanation
+poaf_tip = html.Div([
+    html.P("Score Range: 0-9"),
+    html.P("Age 60-69 years: +1"),
+    html.P("Age 70-79 years: +2"),
+    html.P("Age 80+ years: +3"),
+    html.P("COPD: +1"),
+    html.P("eGFR<15 or on dialysis: +1"),
+    html.P("Emergent surgery: +1"),
+    html.P("Pre-operative intra-aortic balloon pump: +1"),
+    html.P("Left ventricular ejection fraction < 30%: +1"),
+    html.P("Valve surgery: +1"),
+])
+
+#NPOAF calculation explanation
+npoaf_tip = html.Div([
+    html.P("Score Range: 0-7"),
+    html.P("Age 65-74 years: +2"),
+    html.P("Age 75+ years: +3"),
+    html.P("Mild mitrovalve disease: +1"),
+    html.P("Moderate to severe mitral valve disease: +3"),
+    html.P("Left atrial dilation: +1"),
+])
+
+#Simplified POAF calculation explanation
+simplified_tip = html.Div([
+    html.P("Score Range: 0-7"),
+    html.P("Age 65+ years: +2"),
+    html.P("High Blood Pressure: +2"),
+    html.P("Myocardial Infarction: +1"),
+    html.P("Congestive Heart Failure: +2"),
+])
+
+#COM-AF calculation explanation
+comaf_tip = html.Div([
+    html.P("Score Range: 0-6"),
+    html.P("Age 65-74 years: +1"),
+    html.P("Age 75+ years: +2"),
+    html.P("Female: +1"),
+    html.P("High Blood Pressure: +1"),
+    html.P("Diabetes: +1"),
+    html.P("History of Stroke: +1"),
+])
+
 #### Create a data upload button
 upload = html.Div([
     dcc.Upload(
@@ -38,6 +121,12 @@ upload = html.Div([
         },
         # Prevent multiple files from being uploaded
         multiple=False
+    ),
+    dbc.Tooltip(
+        upload_tip,
+        target='upload-data',
+        placement='left',
+        style={'color':'white', 'textAlign':'left'}
     )
 ])
 
@@ -164,37 +253,55 @@ comaf_state = dcc.Store(id='comaf-state', storage_type='local')
 
 #### Create display cards for the calculated risk scores 
 ### --> AFRI Card
-card1 = dbc.Card(
-    dbc.CardBody(
-        [
-            html.H4(id='afri-card', className="card-val1"),
-            html.P(
-                ["Atrial Fibrillation Risk Index"], 
-                className="card-text1",
-                style={'textAlign': 'center'}
-            )
-        ]),
-    style={
-        'margin-right' : '10px', 
-        'margin-top': '10px',
-    }
-)
+card1 = html.Div([
+    dbc.Card(
+        dbc.CardBody(
+            [
+                html.H4(id='afri-card', className="card-val1"),
+                html.P(
+                    ["Atrial Fibrillation Risk Index"], 
+                    className="card-text1",
+                    style={'textAlign': 'center'}
+                )
+            ]),
+        style={
+            'margin-right' : '10px', 
+            'margin-top': '10px',
+        }, id='afri-tip'
+    ),
+    dbc.Tooltip(
+        afri_tip,
+        target="afri-tip",
+        placement='left',
+        style={'color':'white', 'textAlign':'left'}
+    )
+])
+
 ### --> CHADS Card
-card2 = dbc.Card(
-    dbc.CardBody(
-        [
-            html.H4(id='chads-card', className="card-val2"),
-            html.P(
-                ["CHA2DS2-VASc Score"], 
-                className="card-text2",
-                style={'textAlign': 'center'}
-            )
-        ]),
-    style={
-        'margin-right' : '10px', 
-        'margin-top': '10px',
-    }
-)
+card2 = html.Div([
+    dbc.Card(
+        dbc.CardBody(
+            [
+                html.H4(id='chads-card', className="card-val2"),
+                html.P(
+                    ["CHA2DS2-VASc Score"], 
+                    className="card-text2",
+                    style={'textAlign': 'center'}
+                )
+            ]),
+        style={
+            'margin-right' : '10px', 
+            'margin-top': '10px',
+        }, id='chads-tip'
+    ),
+    dbc.Tooltip(
+        chads_tip,
+        target="chads-tip",
+        placement='left',
+        style={'color':'white', 'textAlign':'left'}
+    )
+])
+
 ### --> POAF Card
 card3 = html.Div([
         dbc.Card(
@@ -210,59 +317,90 @@ card3 = html.Div([
             style={
                 'margin-right' : '10px', 
                 'margin-top': '10px',
-            },
-            id='Poaf-card'
+            }, id='poaf-tip'
+    ),
+    dbc.Tooltip(
+        poaf_tip,
+        target="poaf-tip",
+        placement='left',
+        style={'color':'white', 'textAlign':'left'}
     )
- ])
+])
+
 ### --> NPOAF Card
-card4 = dbc.Card(
-    dbc.CardBody(
-        [
-            html.H4(id='npoaf-card', className="card-val4"),
-            html.P(
-                ["New-onset Postoperative Atrial Fibrillation Score"], 
-                className="card-text4",
-                style={'textAlign': 'center'}
-            )
-        ]),
-    style={
-        'margin-right' : '10px', 
-        'margin-top': '10px',
-    }
-)
+card4 = html.Div([
+    dbc.Card(
+        dbc.CardBody(
+            [
+                html.H4(id='npoaf-card', className="card-val4"),
+                html.P(
+                    ["New-onset Postoperative Atrial Fibrillation Score"], 
+                    className="card-text4",
+                    style={'textAlign': 'center'}
+                )
+            ]),
+        style={
+            'margin-right' : '10px', 
+            'margin-top': '10px',
+        }, id='npoaf-tip'
+    ),
+    dbc.Tooltip(
+        npoaf_tip,
+        target="npoaf-tip",
+        placement='left',
+        style={'color':'white', 'textAlign':'left'}
+    )
+])
 ### -->  Simplified POAF Card
-card5 = dbc.Card(
-    dbc.CardBody(
-        [
-            html.H4(id='simplified-card', className="card-val5"),
-            html.P(
-                ["Simplified Postoperative Atrial Fibrillation Score"], 
-                className="card-text5",
-                style={'textAlign': 'center'}
-            )
-        ]),
-    style={
-        'margin-right' : '10px', 
-        'margin-top': '10px',
-    }
-)
+card5 = html.Div([
+    dbc.Card(
+        dbc.CardBody(
+            [
+                html.H4(id='simplified-card', className="card-val5"),
+                html.P(
+                    ["Simplified Postoperative Atrial Fibrillation Score"], 
+                    className="card-text5",
+                    style={'textAlign': 'center'}
+                )
+            ]),
+        style={
+            'margin-right' : '10px', 
+            'margin-top': '10px',
+        }, id='simplified-tip'
+    ),
+    dbc.Tooltip(
+        simplified_tip,
+        target="simplified-tip",
+        placement='left',
+        style={'color':'white', 'textAlign':'left'}
+    )
+])
+
 ### --> COM-AF Card
-card6 = dbc.Card(
-    dbc.CardBody(
-        [
-            html.H4(id='comaf-card', className="card-val6"),
-            html.P(
-                ["Combined Risk Score to Predict Atrial Fibrillation "], 
-                className="card-text6",
-                style={'textAlign': 'center'}
-            )
-        ]),
-    style={
-        'margin-right' : '10px', 
-        'margin-top': '10px',
-        'margin-bottom': '10px'
-    }
-)
+card6 = html.Div([
+    dbc.Card(
+        dbc.CardBody(
+            [
+                html.H4(id='comaf-card', className="card-val6"),
+                html.P(
+                    ["Combined Risk Score to Predict Atrial Fibrillation "], 
+                    className="card-text6",
+                    style={'textAlign': 'center'}
+                )
+            ]),
+        style={
+            'margin-right' : '10px', 
+            'margin-top': '10px',
+            'margin-bottom': '10px'
+        }, id='comaf-tip'
+    ),
+    dbc.Tooltip(
+        comaf_tip,
+        target="comaf-tip",
+        placement='left',
+        style={'color':'white', 'textAlign':'left'}
+    )
+])
 
 #### Create a dropdown menu for the risk score comparison graph
 dropdowns = html.Div([
@@ -898,7 +1036,7 @@ def comaf_calc(button_click, age_state, gender_state, weight_state, height_state
         comaf=0
         if (65 <= age_state <= 74):
             comaf=comaf+1
-        if (age_state >= 65):
+        if (age_state >= 75):
             comaf=comaf+2
         if (gender_state == 'F'):
             comaf=comaf+1

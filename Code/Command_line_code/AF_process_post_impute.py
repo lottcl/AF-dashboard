@@ -255,7 +255,7 @@ def comaf(x):
     comaf=0
     if (65 <= x['age'] <= 74):
         comaf=comaf+1
-    if (x['age'] >= 65):
+    if (x['age'] >= 75):
         comaf=comaf+2
     if (x['gender'] == 'F'):
         comaf=comaf+1
