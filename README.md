@@ -56,5 +56,6 @@ To run the processing code and deploy the dashboard on JupyterLab, you will need
     * plotly
     * statsmodels
 
-To install JupyterDash, follow the instructions in the [Jupyter Dash documentation](https://github.com/plotly/jupyter-dash). Run the code in the processing and dashboard notebooks interactively and follow the instructions within the processing notebook for running R code in `imp_creatinine.R`
-<br> **Note: JupyterLab functionality is still under development for this project so Command Line is the recommended method for deploying the dashboard**
+To install JupyterDash, follow the instructions in the [Jupyter Dash documentation](https://github.com/plotly/jupyter-dash). Run the code in the processing and dashboard notebooks interactively and follow the instructions within the processing notebook for running R code in `AF_impute.ipynb`
+
+**Note: JupyterLab functionality is still under development for this project so Command Line is the recommended method for deploying the dashboard**
